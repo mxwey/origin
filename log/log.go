@@ -157,7 +157,7 @@ func (logger *Logger) Init() {
 
 	var syncerList []zapcore.WriteSyncer
 	if logger.WriteSyncerFun == nil {
-		syncerList = append(syncerList, logger.NewLumberjackWriter())
+		syncerList = append(syncerList, logger.NewRotatelogsWriter())
 	} else {
 		for _, syncer := range logger.WriteSyncerFun {
 			syncerList = append(syncerList, syncer())
