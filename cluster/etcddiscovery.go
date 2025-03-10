@@ -1,6 +1,11 @@
 package cluster
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
 	"github.com/duanhf2012/origin/v2/event"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/rpc"
@@ -9,16 +14,11 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
-	"time"
-	"context"
-	"errors"
-	"fmt"
+	"os"
 	"path"
 	"strings"
 	"sync/atomic"
-	"io/ioutil"
-	"crypto/x509"
-	"crypto/tls"
+	"time"
 )
 
 const originDir = "/origin"
@@ -42,7 +42,8 @@ type EtcdDiscoveryService struct {
 	mapDiscoveryNodeId map[string]map[string]struct{} //map[networkName]map[nodeId]
 }
 
-var  etcdDiscovery *EtcdDiscoveryService
+var etcdDiscovery *EtcdDiscoveryService
+
 func getEtcdDiscovery() IServiceDiscovery {
 	if etcdDiscovery == nil {
 		etcdDiscovery = &EtcdDiscoveryService{}
@@ -50,7 +51,6 @@ func getEtcdDiscovery() IServiceDiscovery {
 
 	return etcdDiscovery
 }
-
 
 func (ed *EtcdDiscoveryService) InitDiscovery(localNodeId string, funDelNode FunDelNode, funSetNode FunSetNode) error {
 	ed.localNodeId = localNodeId
@@ -99,17 +99,17 @@ func (ed *EtcdDiscoveryService) OnInit() error {
 
 		if etcdDiscoveryCfg.EtcdList[i].Cert != "" {
 			// load cert
-			cert, cerr := tls.LoadX509KeyPair(etcdDiscoveryCfg.EtcdList[i].Cert, etcdDiscoveryCfg.EtcdList[i].CertKey)
-			if cerr != nil {
-				log.Error("load cert error", log.ErrorField("err", cerr))
-				return cerr
+			cert, cErr := tls.LoadX509KeyPair(etcdDiscoveryCfg.EtcdList[i].Cert, etcdDiscoveryCfg.EtcdList[i].CertKey)
+			if cErr != nil {
+				log.Error("load cert error", log.ErrorField("err", cErr))
+				return cErr
 			}
 
 			// load root ca
-			caData, cerr := ioutil.ReadFile(etcdDiscoveryCfg.EtcdList[i].Ca)
-			if cerr != nil {
-				log.Error("load root ca error", log.ErrorField("err", cerr))
-				return cerr
+			caData, cErr := os.ReadFile(etcdDiscoveryCfg.EtcdList[i].Ca)
+			if cErr != nil {
+				log.Error("load root ca error", log.ErrorField("err", cErr))
+				return cErr
 			}
 			pool := x509.NewCertPool()
 			pool.AppendCertsFromPEM(caData)
@@ -122,12 +122,11 @@ func (ed *EtcdDiscoveryService) OnInit() error {
 		client, err = clientv3.New(clientv3.Config{
 			Endpoints:   etcdDiscoveryCfg.EtcdList[i].Endpoints,
 			DialTimeout: etcdDiscoveryCfg.DialTimeoutMillisecond,
-			Username: etcdDiscoveryCfg.EtcdList[i].UserName,
-			Password: etcdDiscoveryCfg.EtcdList[i].Password,
+			Username:    etcdDiscoveryCfg.EtcdList[i].UserName,
+			Password:    etcdDiscoveryCfg.EtcdList[i].Password,
 			Logger:      log.GetLogger().Logger,
-			TLS: tlsConfig,
+			TLS:         tlsConfig,
 		})
-
 
 		if err != nil {
 			log.Error("etcd discovery init fail", log.ErrorField("err", err))
