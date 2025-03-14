@@ -479,11 +479,7 @@ func setLogPath(args interface{}) error {
 		return nil
 	}
 	logPath := strings.TrimSpace(args.(string))
-	dir, err := os.Stat(logPath)
-	if err != nil || dir.IsDir() == false {
-		return errors.New("Not found dir " + logPath)
-	}
-
+	_, err := os.Stat(logPath)
 	if err != nil {
 		err = os.MkdirAll(logPath, os.ModePerm)
 		if err != nil {
