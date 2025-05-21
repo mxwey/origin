@@ -142,13 +142,13 @@ func (mp *MongoPersist) OnSetupRank(manual bool, rankSkip *RankSkip) error {
 		return nil
 	}
 
-	log.Info("start load rank ", rankSkip.GetRankName(), " from mongodb.")
+	log.SInfo("start load rank ", rankSkip.GetRankName(), " from mongodb.")
 	err := mp.loadFromDB(rankSkip.GetRankID(), rankSkip.GetRankName())
 	if err != nil {
 		log.SError("load from db is fail :%s", err.Error())
 		return err
 	}
-	log.Info("finish load rank ", rankSkip.GetRankName(), " from mongodb.")
+	log.SInfo("finish load rank ", rankSkip.GetRankName(), " from mongodb.")
 	return nil
 }
 
@@ -296,7 +296,7 @@ func (mp *MongoPersist) saveToDB() {
 			buf := make([]byte, 4096)
 			l := runtime.Stack(buf, false)
 			errString := fmt.Sprint(r)
-			log.Dump(string(buf[:l]), log.String("error", errString))
+			log.StackError(string(buf[:l]), log.String("error", errString))
 		}
 	}()
 
