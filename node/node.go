@@ -49,7 +49,7 @@ func init() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, SingleStop, SignalRetire)
 
 	console.RegisterCommandBool("help", false, "<-help> This help.", usage)
-	console.RegisterCommandString("name", "", "<-name nodeName> Node's name.", setName)
+	console.RegisterCommandString("name", "", "<-name nodeName> node's name.", setName)
 	console.RegisterCommandString("start", "", "<-start nodeid=nodeid> Run originserver.", startNode)
 	console.RegisterCommandString("stop", "", "<-stop nodeid=nodeid> Stop originserver process.", stopNode)
 	console.RegisterCommandString("retire", "", "<-retire nodeid=nodeid> retire originserver process.", retireNode)
