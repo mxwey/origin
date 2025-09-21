@@ -5,13 +5,7 @@ import (
 	"github.com/goccy/go-json"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-)
-
-// 格式说明Entrance_ID
-const (
-	Entrance = "Entrance_"
 )
 
 type GraphPool struct {
@@ -19,7 +13,9 @@ type GraphPool struct {
 	execPool  *ExecPool
 }
 
-func (gp *GraphPool) Load(graphFilePath string) error {
+func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string) error {
+	gp.execPool = execPool
+
 	// 检查路径是否存在
 	stat, err := os.Stat(graphFilePath)
 	if err != nil {
@@ -67,7 +63,11 @@ func (gp *GraphPool) processJSONFile(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %v", filePath, err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("关闭文件 %s 时出错: %v\n", filePath, err)
+		}
+	}()
 
 	fileName := filepath.Base(filePath)
 	ext := filepath.Ext(fileName)             // 获取".html"
@@ -84,25 +84,23 @@ func (gp *GraphPool) processJSONFile(filePath string) error {
 func (gp *GraphPool) prepareGraph(graphName string, graphConfig *graphConfig) error {
 	// 找到所有的入口
 	for _, node := range graphConfig.Nodes {
-		if strings.HasPrefix(node.Class, Entrance) {
-			// 取得ID
-			id := strings.TrimPrefix(node.Class, Entrance)
-			entranceID, err := strconv.Atoi(id)
-			if err != nil {
-				return err
-			}
-			// 对入口进行预处理
-			err = gp.prepareOneEntrance(graphName, int64(entranceID), &node, graphConfig)
-			if err != nil {
-				return err
-			}
+		_, entranceID, ok := getEntranceNodeNameAndID(node.Class)
+		if !ok {
+			continue
 		}
+
+		// 对入口进行预处理
+		err := gp.prepareOneEntrance(graphName, entranceID, &node, graphConfig)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
 }
 
-func (gp *GraphPool) getVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (IBaseExec, string) {
+func (gp *GraphPool) getVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (IInnerExecNode, string) {
 	// 是否为Get_或Set_开头
 	if strings.HasPrefix(nodeCfg.Class, "Get_") || strings.HasPrefix(nodeCfg.Class, "Set_") {
 		return gp.execPool.GetExec(nodeCfg.Class), ""
@@ -141,13 +139,13 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 		if exec == nil {
 			exec, varName = gp.getVarExec(&node, graphConfig)
 			if exec == nil {
-				return nil, fmt.Errorf("no exec found for node %s", node.Class)
+				return nil, fmt.Errorf("%s node has not been registered", node.Class)
 			}
 		}
-		
+
 		nodes[node.Id] = &execNode{
 			Id:                 node.Id,
-			baseExec:           exec,
+			execNode:           exec,
 			preInPort:          make([]*prePortNode, exec.GetInPortCount()),
 			inPortDefaultValue: node.PortDefault,
 			variableName:       varName,
@@ -160,7 +158,7 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig) error {
 	// 找到所有出口
 	var idx int
-	for ; nodeExec.baseExec.IsOutPortExec(idx); idx++ {
+	for ; nodeExec.execNode.IsOutPortExec(idx); idx++ {
 		// 找到出口结点
 		nextExecNode := gp.findOutNextNode(graphConfig, mapNodeExec, nodeExec.Id, idx)
 		nodeExec.nextNode = append(nodeExec.nextNode, nextExecNode)
@@ -245,9 +243,9 @@ func (gp *GraphPool) findPreInPortNode(mapNodes map[string]*execNode, nodeExec *
 
 func (gp *GraphPool) preparePreInPortNode(mapNodes map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig) error {
 	// 找到当前结点的所有inPort的前一个端口
-	for i := 0; i < nodeExec.baseExec.GetInPortCount(); i++ {
+	for i := 0; i < nodeExec.execNode.GetInPortCount(); i++ {
 		// 如果是执行结点，则跳过
-		if nodeExec.baseExec.IsInPortExec(i) {
+		if nodeExec.execNode.IsInPortExec(i) {
 			continue
 		}
 

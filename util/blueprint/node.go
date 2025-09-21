@@ -9,7 +9,7 @@ type prePortNode struct {
 
 type execNode struct {
 	Id       string
-	baseExec IBaseExec
+	execNode IInnerExecNode
 
 	nextNode []*execNode
 	nextIdx  int
@@ -37,19 +37,19 @@ func (en *execNode) Next() *execNode {
 	return en.nextNode[en.nextIdx]
 }
 
-func (en *execNode) exec(gr *graph) error {
-	e, ok := en.baseExec.(IExec)
+func (en *execNode) exec(gr *graph) (int, error) {
+	e, ok := en.execNode.(IExecNode)
 	if !ok {
-		return fmt.Errorf("exec node %s not exec", en.baseExec.GetName())
+		return -1, fmt.Errorf("exec node %s not exec", en.execNode.GetName())
 	}
 
-	node, ok := en.baseExec.(IBaseExecNode)
+	node, ok := en.execNode.(IBaseExecNode)
 	if !ok {
-		return fmt.Errorf("exec node %s not exec", en.baseExec.GetName())
+		return -1, fmt.Errorf("exec node %s not exec", en.execNode.GetName())
 	}
 
-	if err := node.initExecNode(gr, en.Id, en.variableName, en.baseExec.GetName()); err != nil {
-		return err
+	if err := node.initExecNode(gr, en); err != nil {
+		return -1, err
 	}
 
 	return e.Exec()
@@ -84,7 +84,7 @@ func (en *execNode) doSetInPort(gr *graph, index int, inPort IPort) error {
 
 func (en *execNode) Do(gr *graph) error {
 	// 重新初始化上下文
-	inPorts, outPorts := en.baseExec.CloneInOutPort()
+	inPorts, outPorts := en.execNode.CloneInOutPort()
 	gr.context[en.Id] = &ExecContext{
 		InputPorts:  inPorts,
 		OutputPorts: outPorts,
@@ -93,7 +93,7 @@ func (en *execNode) Do(gr *graph) error {
 	// 处理InPort结点值
 	var err error
 	for index := range inPorts {
-		if en.baseExec.IsInPortExec(index) {
+		if en.execNode.IsInPortExec(index) {
 			continue
 		}
 
@@ -106,16 +106,18 @@ func (en *execNode) Do(gr *graph) error {
 	// 设置执行器相关的上下文信息
 	// 如果是变量设置变量名
 	// 执行本结点
-	if err = en.exec(gr); err != nil {
+	nextIndex, err := en.exec(gr)
+	if err != nil {
 		return err
 	}
 
-	for _, nextNode := range en.nextNode {
-		err = nextNode.Do(gr)
-		if err != nil {
-			return err
-		}
+	if nextIndex == -1 {
+		return nil
 	}
 
-	return nil
+	if nextIndex < 0 || nextIndex >= len(en.nextNode) {
+		return fmt.Errorf("next index %d not found", nextIndex)
+	}
+
+	return en.nextNode[nextIndex].Do(gr)
 }

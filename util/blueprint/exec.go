@@ -3,12 +3,13 @@ package blueprint
 import "fmt"
 
 type IBaseExecNode interface {
-	initExecNode(gr *graph, nodeId string, variableName string, nodeName string) error
+	initInnerExecNode(innerNode *innerExecNode)
+	initExecNode(gr *graph, en *execNode) error
 }
 
-type IBaseExec interface {
+type IInnerExecNode interface {
 	GetName() string
-	SetExec(exec IExec)
+	SetExec(exec IExecNode)
 	IsInPortExec(index int) bool
 	IsOutPortExec(index int) bool
 	GetInPortCount() int
@@ -18,15 +19,15 @@ type IBaseExec interface {
 	GetOutPort(index int) IPort
 }
 
-type IExec interface {
+type IExecNode interface {
 	GetName() string
-	Exec() error
+	DoNext(index int) error
+	Exec() (int, error) // 返回后续执行的Node的Index
+	GetNextExecLen() int
+	getInnerExecNode() IInnerExecNode
 }
 
-type IExecData interface {
-}
-
-type BaseExec struct {
+type innerExecNode struct {
 	Name        string
 	Title       string
 	Package     string
@@ -34,7 +35,16 @@ type BaseExec struct {
 
 	InPort  []IPort
 	OutPort []IPort
-	IExec
+	IExecNode
+}
+
+type BaseExecNode struct {
+	*innerExecNode
+
+	// 执行时初始化的数据
+	*ExecContext
+	gr       *graph
+	execNode *execNode
 }
 
 type InputConfig struct {
@@ -62,23 +72,23 @@ type BaseExecConfig struct {
 	Outputs     []OutInputConfig `json:"outputs"`
 }
 
-func (em *BaseExec) AppendInPort(port ...IPort) {
+func (em *innerExecNode) AppendInPort(port ...IPort) {
 	em.InPort = append(em.InPort, port...)
 }
 
-func (em *BaseExec) AppendOutPort(port ...IPort) {
+func (em *innerExecNode) AppendOutPort(port ...IPort) {
 	em.OutPort = append(em.OutPort, port...)
 }
 
-func (em *BaseExec) GetName() string {
+func (em *innerExecNode) GetName() string {
 	return em.Name
 }
 
-func (em *BaseExec) SetExec(exec IExec) {
-	em.IExec = exec
+func (em *innerExecNode) SetExec(exec IExecNode) {
+	em.IExecNode = exec
 }
 
-func (em *BaseExec) CloneInOutPort() ([]IPort, []IPort) {
+func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	inPorts := make([]IPort, 0, 2)
 	for _, port := range em.InPort {
 		if port.IsPortExec() {
@@ -99,14 +109,14 @@ func (em *BaseExec) CloneInOutPort() ([]IPort, []IPort) {
 	return inPorts, outPorts
 }
 
-func (em *BaseExec) IsInPortExec(index int) bool {
+func (em *innerExecNode) IsInPortExec(index int) bool {
 	if index >= len(em.InPort) || index < 0 {
 		return false
 	}
 
 	return em.InPort[index].IsPortExec()
 }
-func (em *BaseExec) IsOutPortExec(index int) bool {
+func (em *innerExecNode) IsOutPortExec(index int) bool {
 	if index >= len(em.OutPort) || index < 0 {
 		return false
 	}
@@ -114,40 +124,37 @@ func (em *BaseExec) IsOutPortExec(index int) bool {
 	return em.OutPort[index].IsPortExec()
 }
 
-func (em *BaseExec) GetInPortCount() int {
+func (em *innerExecNode) GetInPortCount() int {
 	return len(em.InPort)
 }
 
-func (em *BaseExec) GetInPort(index int) IPort {
+func (em *innerExecNode) GetInPort(index int) IPort {
 	if index >= len(em.InPort) || index < 0 {
 		return nil
 	}
 	return em.InPort[index]
 }
 
-func (em *BaseExec) GetOutPort(index int) IPort {
+func (em *innerExecNode) GetOutPort(index int) IPort {
 	if index >= len(em.OutPort) || index < 0 {
 		return nil
 	}
 	return em.OutPort[index]
 }
 
-type BaseExecNode struct {
-	*ExecContext
-	gr           *graph
-	variableName string
-	nodeName     string
+func (en *BaseExecNode) initInnerExecNode(innerNode *innerExecNode) {
+	en.innerExecNode = innerNode
 }
 
-func (en *BaseExecNode) initExecNode(gr *graph, nodeId string, variableName string, nodeName string) error {
-	ctx, ok := gr.context[nodeId]
+func (en *BaseExecNode) initExecNode(gr *graph, node *execNode) error {
+	ctx, ok := gr.context[node.Id]
 	if !ok {
-		return fmt.Errorf("node %s not found", nodeId)
+		return fmt.Errorf("node %s not found", node.Id)
 	}
+
 	en.ExecContext = ctx
 	en.gr = gr
-	en.variableName = variableName
-	en.nodeName = nodeName
+	en.execNode = node
 	return nil
 }
 
@@ -411,4 +418,29 @@ func (en *BaseExecNode) GetOutPortArrayLen(index int) int {
 		return 0
 	}
 	return port.GetArrayLen()
+}
+
+func (en *BaseExecNode) DoNext(index int) error {
+	// -1 表示中断运行
+	if index == -1 {
+		return nil
+	}
+
+	if index < 0 || index >= len(en.execNode.nextNode) {
+		return fmt.Errorf("next index %d not found", index)
+	}
+
+	return en.execNode.nextNode[index].Do(en.gr)
+}
+
+func (en *BaseExecNode) GetNextExecLen() int {
+	return len(en.execNode.nextNode)
+}
+
+func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
+	innerNode, ok := en.execNode.execNode.(IInnerExecNode)
+	if ok {
+		return innerNode
+	}
+	return nil
 }

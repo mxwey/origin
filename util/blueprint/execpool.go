@@ -5,16 +5,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
+// 格式说明Entrance_ID
+const (
+	Entrance = "Entrance_"
+)
+
 type ExecPool struct {
-	baseExecMap map[string]IBaseExec
-	execMap     map[string]IBaseExec
+	innerExecNodeMap map[string]IInnerExecNode
+	execNodeMap      map[string]IExecNode
 }
 
 func (em *ExecPool) Load(execDefFilePath string) error {
-	em.baseExecMap = make(map[string]IBaseExec, 512)
+	em.innerExecNodeMap = make(map[string]IInnerExecNode, 512)
+	em.execNodeMap = make(map[string]IExecNode, 512)
 
 	// 检查路径是否存在
 	stat, err := os.Stat(execDefFilePath)
@@ -69,19 +76,21 @@ func (em *ExecPool) processJSONFile(filePath string) error {
 		}
 	}(file)
 
-	var baseExecConfig BaseExecConfig
+	var baseExecConfig []BaseExecConfig
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&baseExecConfig); err != nil {
+	if err = decoder.Decode(&baseExecConfig); err != nil {
 		return fmt.Errorf("failed to decode JSON from file %s: %v", filePath, err)
 	}
 
-	exec, err := em.createExecFromJSON(baseExecConfig)
-	if err != nil {
-		return err
-	}
+	for i := range baseExecConfig {
+		exec, err := em.createExecFromJSON(baseExecConfig[i])
+		if err != nil {
+			return err
+		}
 
-	if !em.loadBaseExec(exec) {
-		return fmt.Errorf("exec %s already registered", exec.GetName())
+		if !em.loadBaseExec(exec) {
+			return fmt.Errorf("exec %s already registered", exec.GetName())
+		}
 	}
 
 	return nil
@@ -104,9 +113,15 @@ func (em *ExecPool) createPortByDataType(nodeName, portName, dataType string) (I
 	return nil, fmt.Errorf("invalid data type %s,node %s port %s", dataType, nodeName, portName)
 }
 
-func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IBaseExec, error) {
-	var baseExec BaseExec
-	baseExec.Name = baseExecConfig.Name
+func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExecNode, error) {
+	var baseExec innerExecNode
+
+	entranceName, _, ok := getEntranceNodeNameAndID(baseExecConfig.Name)
+	if ok {
+		baseExec.Name = entranceName
+	} else {
+		baseExec.Name = baseExecConfig.Name
+	}
 	baseExec.Title = baseExecConfig.Title
 	baseExec.Package = baseExecConfig.Package
 	baseExec.Description = baseExecConfig.Description
@@ -114,7 +129,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IBaseExec
 	// exec数量
 	inExecNum := 0
 	for index, input := range baseExecConfig.Inputs {
-		portType := strings.ToLower(input.DataType)
+		portType := strings.ToLower(input.PortType)
 		if portType != Config_PortType_Exec && portType != Config_PortType_Data {
 			return nil, fmt.Errorf("input %s data type %s not support", input.Name, input.DataType)
 		}
@@ -142,7 +157,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IBaseExec
 
 	hasData := false
 	for _, output := range baseExecConfig.Outputs {
-		portType := strings.ToLower(output.DataType)
+		portType := strings.ToLower(output.PortType)
 		if portType != Config_PortType_Exec && portType != Config_PortType_Data {
 			return nil, fmt.Errorf("output %s data type %s not support,node name %s", output.Name, output.DataType, baseExec.Name)
 		}
@@ -153,7 +168,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IBaseExec
 		}
 
 		if portType == Config_PortType_Exec {
-			baseExec.AppendInPort(NewPortExec())
+			baseExec.AppendOutPort(NewPortExec())
 			continue
 		}
 		hasData = true
@@ -167,32 +182,44 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IBaseExec
 	return &baseExec, nil
 }
 
-func (em *ExecPool) loadBaseExec(exec IBaseExec) bool {
-	if _, ok := em.baseExecMap[exec.GetName()]; ok {
+func (em *ExecPool) loadBaseExec(exec IInnerExecNode) bool {
+	if _, ok := em.innerExecNodeMap[exec.GetName()]; ok {
 		return false
 	}
-	em.baseExecMap[exec.GetName()] = exec
+	em.innerExecNodeMap[exec.GetName()] = exec
 	return true
 }
 
-func (em *ExecPool) Register(exec IExec) bool {
-	baseExec, ok := exec.(IBaseExec)
+func (em *ExecPool) Register(exec IExecNode) bool {
+	baseExec, ok := exec.(IExecNode)
 	if !ok {
 		return false
 	}
 
-	if _, ok := em.execMap[baseExec.GetName()]; ok {
+	innerNode, ok := em.innerExecNodeMap[baseExec.GetName()]
+	if !ok {
 		return false
 	}
 
-	baseExec.SetExec(exec)
-	em.execMap[baseExec.GetName()] = baseExec
+	if _, ok := em.execNodeMap[innerNode.GetName()]; ok {
+		return false
+	}
+
+	baseExecNode, ok := exec.(IBaseExecNode)
+	if !ok {
+		return false
+	}
+
+	baseExecNode.initInnerExecNode(innerNode.(*innerExecNode))
+	innerNode.SetExec(exec)
+
+	em.execNodeMap[baseExec.GetName()] = baseExec
 	return true
 }
 
-func (em *ExecPool) GetExec(name string) IBaseExec {
-	if exec, ok := em.execMap[name]; ok {
-		return exec
+func (em *ExecPool) GetExec(name string) IInnerExecNode {
+	if exec, ok := em.execNodeMap[name]; ok {
+		return exec.getInnerExecNode()
 	}
 	return nil
 }
@@ -245,17 +272,24 @@ func (em *ExecPool) loadSysExec() error {
 }
 
 func (em *ExecPool) regGetVariables(typ string) error {
-	var baseExec BaseExec
+	var baseExec innerExecNode
 	baseExec.Name = genGetVariablesNodeName(typ)
 
 	outPort := NewPortByType(typ)
+	if outPort == nil {
+		return fmt.Errorf("invalid type %s", typ)
+	}
 	baseExec.AppendOutPort(outPort)
-	baseExec.IExec = &GetVariablesNode{nodeName: baseExec.GetName()}
+
+	var getVariablesNode GetVariablesNode
+	getVariablesNode.nodeName = baseExec.GetName()
+	//getVariablesNode.execNode = &baseExec
+	//baseExec.IExecNode = &getVariablesNode
 
 	if !em.loadBaseExec(&baseExec) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
-	if !em.Register(baseExec.IExec) {
+	if !em.Register(&getVariablesNode) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
 
@@ -271,7 +305,7 @@ func genGetVariablesNodeName(typ string) string {
 }
 
 func (em *ExecPool) regSetVariables(typ string) error {
-	var baseExec BaseExec
+	var baseExec innerExecNode
 	baseExec.Name = genSetVariablesNodeName(typ)
 
 	inPort := NewPortByType(typ)
@@ -280,13 +314,31 @@ func (em *ExecPool) regSetVariables(typ string) error {
 	baseExec.AppendInPort(inPort)
 	baseExec.AppendOutPort(outPort)
 
-	baseExec.IExec = &SetVariablesNode{nodeName: baseExec.GetName()}
+	baseExec.IExecNode = &SetVariablesNode{nodeName: baseExec.GetName()}
 	if !em.loadBaseExec(&baseExec) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
-	if !em.Register(baseExec.IExec) {
+	if !em.Register(baseExec.IExecNode) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
 
 	return nil
+}
+
+func getEntranceNodeNameAndID(className string) (string, int64, bool) {
+	if !strings.HasPrefix(className, Entrance) {
+		return "", 0, false
+	}
+
+	parts := strings.Split(className, "_")
+	if len(parts) != 3 {
+		return "", 0, false
+	}
+
+	entranceID, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return "", 0, false
+	}
+
+	return parts[0] + "_" + parts[1], int64(entranceID), true
 }

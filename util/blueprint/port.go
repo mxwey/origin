@@ -278,13 +278,13 @@ func NewPortByType(typ string) IPort {
 	switch typ {
 	case Config_PortType_Exec:
 		return NewPortExec()
-	case Config_DataType_Int:
+	case Config_DataType_Int, Config_DataType_Integer:
 		return NewPortInt()
 	case Config_DataType_Float:
 		return NewPortFloat()
 	case Config_DataType_Str:
 		return NewPortStr()
-	case Config_DataType_Bool:
+	case Config_DataType_Bool, Config_DataType_Boolean:
 		return NewPortBool()
 	case Config_DataType_Array:
 		return NewPortArray()

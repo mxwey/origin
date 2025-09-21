@@ -14,10 +14,10 @@ type graph struct {
 }
 
 type nodeConfig struct {
-	Id          string                 `json:"id"`
-	Class       string                 `json:"class"`
-	Module      string                 `json:"module"`
-	Pos         []float64              `json:"pos"`
+	Id     string `json:"id"`
+	Class  string `json:"class"`
+	Module string `json:"module"`
+	//Pos         []float64              `json:"pos"`
 	PortDefault map[string]interface{} `json:"port_defaultv"`
 }
 
