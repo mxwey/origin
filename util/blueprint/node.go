@@ -90,12 +90,13 @@ func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {
 		OutputPorts: outPorts,
 	}
 
+	startOutIdx := en.execNode.GetOutPortParamStartIndex()
 	for i := 0; i < len(outPortArgs); i++ {
 		if i >= len(outPorts) {
 			return fmt.Errorf("args %d not found in node %s", i, en.execNode.GetName())
 		}
 
-		if err := outPorts[i].setAnyVale(outPortArgs[i]); err != nil {
+		if err := outPorts[i+startOutIdx].setAnyVale(outPortArgs[i]); err != nil {
 			return fmt.Errorf("args %d set value error: %w", i, err)
 		}
 	}

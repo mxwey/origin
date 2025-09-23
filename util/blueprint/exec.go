@@ -18,6 +18,9 @@ type IInnerExecNode interface {
 
 	GetInPort(index int) IPort
 	GetOutPort(index int) IPort
+
+	GetInPortParamStartIndex() int
+	GetOutPortParamStartIndex() int
 }
 
 type IExecNode interface {
@@ -36,6 +39,9 @@ type innerExecNode struct {
 
 	InPort  []IPort
 	OutPort []IPort
+
+	inPortParamStartIndex  int // 输入参数的起始索引,用于排除执行入口
+	outPortParamStartIndex int // 输出参数的起始索引,用于排除执行出口
 	IExecNode
 }
 
@@ -74,11 +80,29 @@ type BaseExecConfig struct {
 }
 
 func (em *innerExecNode) AppendInPort(port ...IPort) {
-	em.InPort = append(em.InPort, port...)
+	if len(em.InPort) == 0 {
+		em.inPortParamStartIndex = -1
+	}
+
+	for i := 0; i < len(port); i++ {
+		if !port[i].IsPortExec() && em.inPortParamStartIndex < 0 {
+			em.inPortParamStartIndex = len(em.InPort)
+		}
+
+		em.InPort = append(em.InPort, port[i])
+	}
 }
 
 func (em *innerExecNode) AppendOutPort(port ...IPort) {
-	em.OutPort = append(em.OutPort, port...)
+	if len(em.OutPort) == 0 {
+		em.outPortParamStartIndex = -1
+	}
+	for i := 0; i < len(port); i++ {
+		if !port[i].IsPortExec() && em.outPortParamStartIndex < 0 {
+			em.outPortParamStartIndex = len(em.OutPort)
+		}
+		em.OutPort = append(em.OutPort, port[i])
+	}
 }
 
 func (em *innerExecNode) GetName() string {
@@ -93,6 +117,8 @@ func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	inPorts := make([]IPort, 0, 2)
 	for _, port := range em.InPort {
 		if port.IsPortExec() {
+			// 执行入口, 不需要克隆,占位处理
+			inPorts = append(inPorts, nil)
 			continue
 		}
 
@@ -102,6 +128,7 @@ func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 
 	for _, port := range em.OutPort {
 		if port.IsPortExec() {
+			outPorts = append(outPorts, nil)
 			continue
 		}
 		outPorts = append(outPorts, port.Clone())
@@ -145,6 +172,14 @@ func (em *innerExecNode) GetOutPort(index int) IPort {
 		return nil
 	}
 	return em.OutPort[index]
+}
+
+func (em *innerExecNode) GetInPortParamStartIndex() int {
+	return em.inPortParamStartIndex
+}
+
+func (em *innerExecNode) GetOutPortParamStartIndex() int {
+	return em.outPortParamStartIndex
 }
 
 func (en *BaseExecNode) initInnerExecNode(innerNode *innerExecNode) {
@@ -197,6 +232,7 @@ func (en *BaseExecNode) GetInPortInt(index int) (Port_Int, bool) {
 	if port == nil {
 		return 0, false
 	}
+
 	return port.GetInt()
 }
 

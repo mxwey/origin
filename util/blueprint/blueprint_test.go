@@ -24,8 +24,9 @@ type Output struct {
 func (em *Output) GetName() string {
 	return "Output"
 }
+
 func (em *Output) Exec() (int, error) {
-	val, ok := em.GetInPortInt(0)
+	val, ok := em.GetInPortInt(1)
 	if !ok {
 		return 0, fmt.Errorf("Output Exec inParam not found")
 	}
