@@ -4,7 +4,7 @@ import "fmt"
 
 type IBaseExecNode interface {
 	initInnerExecNode(innerNode *innerExecNode)
-	initExecNode(gr *graph, en *execNode) error
+	initExecNode(gr *Graph, en *execNode) error
 }
 
 type IInnerExecNode interface {
@@ -13,6 +13,7 @@ type IInnerExecNode interface {
 	IsInPortExec(index int) bool
 	IsOutPortExec(index int) bool
 	GetInPortCount() int
+	GetOutPortCount() int
 	CloneInOutPort() ([]IPort, []IPort)
 
 	GetInPort(index int) IPort
@@ -43,7 +44,7 @@ type BaseExecNode struct {
 
 	// 执行时初始化的数据
 	*ExecContext
-	gr       *graph
+	gr       *Graph
 	execNode *execNode
 }
 
@@ -128,6 +129,10 @@ func (em *innerExecNode) GetInPortCount() int {
 	return len(em.InPort)
 }
 
+func (em *innerExecNode) GetOutPortCount() int {
+	return len(em.OutPort)
+}
+
 func (em *innerExecNode) GetInPort(index int) IPort {
 	if index >= len(em.InPort) || index < 0 {
 		return nil
@@ -146,7 +151,7 @@ func (en *BaseExecNode) initInnerExecNode(innerNode *innerExecNode) {
 	en.innerExecNode = innerNode
 }
 
-func (en *BaseExecNode) initExecNode(gr *graph, node *execNode) error {
+func (en *BaseExecNode) initExecNode(gr *Graph, node *execNode) error {
 	ctx, ok := gr.context[node.Id]
 	if !ok {
 		return fmt.Errorf("node %s not found", node.Id)
@@ -159,6 +164,10 @@ func (en *BaseExecNode) initExecNode(gr *graph, node *execNode) error {
 }
 
 func (en *BaseExecNode) GetInPort(index int) IPort {
+	if en.InputPorts == nil {
+		return nil
+	}
+
 	if index >= len(en.InputPorts) || index < 0 {
 		return nil
 	}
@@ -166,6 +175,9 @@ func (en *BaseExecNode) GetInPort(index int) IPort {
 }
 
 func (en *BaseExecNode) GetOutPort(index int) IPort {
+	if en.OutputPorts == nil {
+		return nil
+	}
 	if index >= len(en.OutputPorts) || index < 0 {
 		return nil
 	}
@@ -438,9 +450,5 @@ func (en *BaseExecNode) GetNextExecLen() int {
 }
 
 func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
-	innerNode, ok := en.execNode.execNode.(IInnerExecNode)
-	if ok {
-		return innerNode
-	}
-	return nil
+	return en.innerExecNode.IExecNode.(IInnerExecNode)
 }

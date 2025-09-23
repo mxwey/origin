@@ -9,12 +9,13 @@ import (
 )
 
 type GraphPool struct {
-	mapGraphs map[string]graph
+	mapGraphs map[string]*baseGraph
 	execPool  *ExecPool
 }
 
 func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string) error {
 	gp.execPool = execPool
+	gp.mapGraphs = make(map[string]*baseGraph, 1024)
 
 	// 检查路径是否存在
 	stat, err := os.Stat(graphFilePath)
@@ -53,8 +54,12 @@ func (gp *GraphPool) Create(graphName string) IGraph {
 	if !ok {
 		return nil
 	}
+	
+	var graph Graph
+	graph.baseGraph = gr
+	graph.context = make(map[string]*ExecContext, 4)
 
-	return &gr
+	return &graph
 }
 
 func (gp *GraphPool) processJSONFile(filePath string) error {
@@ -134,8 +139,13 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 	nodes := make(map[string]*execNode)
 	for _, node := range graphConfig.Nodes {
 		var varName string
+		className := node.Class
+		if name, _, ok := getEntranceNodeNameAndID(className); ok {
+			className = name
+		}
+
 		// 获取不到node，则获取变量node
-		exec := gp.execPool.GetExec(node.Class)
+		exec := gp.execPool.GetExec(className)
 		if exec == nil {
 			exec, varName = gp.getVarExec(&node, graphConfig)
 			if exec == nil {
@@ -155,19 +165,27 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 	return nodes, nil
 }
 
-func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig) error {
+func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig, recursion *int) error {
+	*recursion++
+	if *recursion > 100 {
+		return fmt.Errorf("recursion too deep")
+	}
+
 	// 找到所有出口
 	var idx int
-	for ; nodeExec.execNode.IsOutPortExec(idx); idx++ {
+	for ; nodeExec.execNode.IsOutPortExec(idx) && idx < nodeExec.execNode.GetOutPortCount(); idx++ {
 		// 找到出口结点
 		nextExecNode := gp.findOutNextNode(graphConfig, mapNodeExec, nodeExec.Id, idx)
+		if nextExecNode == nil {
+			continue
+		}
 		nodeExec.nextNode = append(nodeExec.nextNode, nextExecNode)
 	}
 
 	// 将所有的next填充next
 	for _, nextOne := range nodeExec.nextNode {
 		// 对出口进行预处理
-		err := gp.prepareOneNode(mapNodeExec, nextOne, graphConfig)
+		err := gp.prepareOneNode(mapNodeExec, nextOne, graphConfig, recursion)
 		if err != nil {
 			return err
 		}
@@ -201,7 +219,7 @@ func (gp *GraphPool) prepareOneEntrance(graphName string, entranceID int64, node
 		return fmt.Errorf("entrance node %s not found", nodeCfg.Id)
 	}
 
-	err = gp.prepareOneNode(mapNodes, nodeExec, graphConfig)
+	err = gp.prepareOneNode(mapNodes, nodeExec, graphConfig, new(int))
 	if err != nil {
 		return err
 	}
@@ -212,12 +230,15 @@ func (gp *GraphPool) prepareOneEntrance(graphName string, entranceID int64, node
 		return err
 	}
 
-	var gr graph
+	var gr baseGraph
 	gr.entrance = make(map[int64]*execNode, 16)
-	gr.context = make(map[string]*ExecContext, 16)
-
 	gr.entrance[entranceID] = nodeExec
-	gp.mapGraphs[graphName] = gr
+
+	if _, ok := gp.mapGraphs[graphName]; ok {
+		return fmt.Errorf("baseGraph %s already exists", graphName)
+	}
+
+	gp.mapGraphs[graphName] = &gr
 
 	return nil
 }
@@ -267,6 +288,11 @@ func (gp *GraphPool) prepareInPort(mapNodeExec map[string]*execNode, nodeExec *e
 
 		// 对nextNode结点的入口进行预处理
 		err := gp.preparePreInPortNode(mapNodeExec, nextNode, graphConfig)
+		if err != nil {
+			return err
+		}
+
+		err = gp.prepareInPort(mapNodeExec, nextNode, graphConfig)
 		if err != nil {
 			return err
 		}

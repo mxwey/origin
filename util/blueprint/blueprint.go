@@ -20,5 +20,10 @@ func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, onRegist
 	if err != nil {
 		return err
 	}
+
 	return nil
+}
+
+func (bm *Blueprint) Create(graphName string) IGraph {
+	return bm.graphPool.Create(graphName)
 }

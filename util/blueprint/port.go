@@ -161,8 +161,53 @@ func (em *Port[T]) IsPortExec() bool {
 	return ok
 }
 
+func (em *Port[T]) convertInt64(v any) (int64, bool) {
+	switch v.(type) {
+	case int:
+		return int64(v.(int)), true
+	case int64:
+		return v.(int64), true
+	case int32:
+		return int64(v.(int32)), true
+	case int16:
+		return int64(v.(int16)), true
+	case int8:
+		return int64(v.(int8)), true
+	case uint64:
+		return int64(v.(uint64)), true
+	case uint32:
+		return int64(v.(uint32)), true
+	case uint16:
+		return int64(v.(uint16)), true
+	case uint8:
+		return int64(v.(uint8)), true
+	case uint:
+		return int64(v.(uint)), true
+	default:
+		return 0, false
+	}
+}
+
 func (em *Port[T]) setAnyVale(v any) error {
 	switch v.(type) {
+	case int, int64:
+		val, ok := em.convertInt64(v)
+		if !ok {
+			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
+		}
+
+		switch any(em.PortVal).(type) {
+		case Port_Int:
+			em.SetInt(val)
+		case Port_Float:
+			em.SetFloat(Port_Float(val))
+		case Port_Str:
+			em.SetStr(fmt.Sprintf("%d", int64(val)))
+		case Port_Bool:
+			em.SetBool(int64(val) != 0)
+		default:
+			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
+		}
 	case float64:
 		fV := v.(float64)
 		switch any(em.PortVal).(type) {
@@ -174,6 +219,8 @@ func (em *Port[T]) setAnyVale(v any) error {
 			em.SetStr(fmt.Sprintf("%d", int64(fV)))
 		case Port_Bool:
 			em.SetBool(int64(fV) != 0)
+		default:
+			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
 		}
 	case string:
 		strV := v.(string)
@@ -198,6 +245,8 @@ func (em *Port[T]) setAnyVale(v any) error {
 				return err
 			}
 			em.SetBool(val)
+		default:
+			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
 		}
 	case bool:
 		strV := v.(bool)
@@ -210,8 +259,11 @@ func (em *Port[T]) setAnyVale(v any) error {
 			return fmt.Errorf("port type is string, but value is %v", strV)
 		case Port_Bool:
 			em.SetBool(strV)
+		default:
+			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
 		}
 	}
+
 	return nil
 }
 

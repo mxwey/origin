@@ -37,7 +37,7 @@ func (en *execNode) Next() *execNode {
 	return en.nextNode[en.nextIdx]
 }
 
-func (en *execNode) exec(gr *graph) (int, error) {
+func (en *execNode) exec(gr *Graph) (int, error) {
 	e, ok := en.execNode.(IExecNode)
 	if !ok {
 		return -1, fmt.Errorf("exec node %s not exec", en.execNode.GetName())
@@ -55,7 +55,7 @@ func (en *execNode) exec(gr *graph) (int, error) {
 	return e.Exec()
 }
 
-func (en *execNode) doSetInPort(gr *graph, index int, inPort IPort) error {
+func (en *execNode) doSetInPort(gr *Graph, index int, inPort IPort) error {
 	// 找到当前Node的InPort的index的前一个结点
 	preNode := en.preInPort[index]
 	// 如果前一个结点为空，则填充默认值
@@ -79,15 +79,25 @@ func (en *execNode) doSetInPort(gr *graph, index int, inPort IPort) error {
 	}
 
 	// 如果前一个结点没有执行过，则递归执行前一个结点
-	return preNode.node.Do(gr)
+	return preNode.node.Do(gr, nil)
 }
 
-func (en *execNode) Do(gr *graph) error {
+func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {
 	// 重新初始化上下文
 	inPorts, outPorts := en.execNode.CloneInOutPort()
 	gr.context[en.Id] = &ExecContext{
 		InputPorts:  inPorts,
 		OutputPorts: outPorts,
+	}
+
+	for i := 0; i < len(outPortArgs); i++ {
+		if i >= len(outPorts) {
+			return fmt.Errorf("args %d not found in node %s", i, en.execNode.GetName())
+		}
+
+		if err := outPorts[i].setAnyVale(outPortArgs[i]); err != nil {
+			return fmt.Errorf("args %d set value error: %w", i, err)
+		}
 	}
 
 	// 处理InPort结点值
@@ -111,7 +121,7 @@ func (en *execNode) Do(gr *graph) error {
 		return err
 	}
 
-	if nextIndex == -1 {
+	if nextIndex == -1 || en.nextNode == nil {
 		return nil
 	}
 

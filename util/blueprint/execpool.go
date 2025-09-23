@@ -247,9 +247,7 @@ func (em *ExecPool) loadSysExec() error {
 	if err = em.regGetVariables(Config_DataType_Array); err != nil {
 		return err
 	}
-	if err = em.regSetVariables(Config_DataType_Int); err != nil {
-		return err
-	}
+
 	if err = em.regSetVariables(Config_DataType_Integer); err != nil {
 		return err
 	}
@@ -283,8 +281,6 @@ func (em *ExecPool) regGetVariables(typ string) error {
 
 	var getVariablesNode GetVariablesNode
 	getVariablesNode.nodeName = baseExec.GetName()
-	//getVariablesNode.execNode = &baseExec
-	//baseExec.IExecNode = &getVariablesNode
 
 	if !em.loadBaseExec(&baseExec) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())

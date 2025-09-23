@@ -3,16 +3,24 @@ package blueprint
 import "fmt"
 
 type IGraph interface {
-	Do(entranceID int64) error
+	Do(entranceID int64, args ...any) error
+	Release()
 }
 
-type graph struct {
+type baseGraph struct {
+	entrance map[int64]*execNode // 入口
+}
+
+type Graph struct {
+	*baseGraph
+	graphContext
+}
+
+type graphContext struct {
 	context         map[string]*ExecContext // 上下文
-	entrance        map[int64]*execNode     // 入口
 	variables       map[string]IPort        // 变量
 	globalVariables map[string]IPort        // 全局变量
 }
-
 type nodeConfig struct {
 	Id     string `json:"id"`
 	Class  string `json:"class"`
@@ -65,7 +73,7 @@ func (gc *graphConfig) GetNodeByID(nodeID string) *nodeConfig {
 	return nil
 }
 
-func (gr *graph) Do(entranceID int64) error {
+func (gr *Graph) Do(entranceID int64, args ...any) error {
 	entranceNode := gr.entrance[entranceID]
 	if entranceNode == nil {
 		return fmt.Errorf("entranceID:%d not found", entranceID)
@@ -76,10 +84,10 @@ func (gr *graph) Do(entranceID int64) error {
 		gr.globalVariables = map[string]IPort{}
 	}
 
-	return entranceNode.Do(gr)
+	return entranceNode.Do(gr, args...)
 }
 
-func (gr *graph) GetNodeInPortValue(nodeID string, inPortIndex int) IPort {
+func (gr *Graph) GetNodeInPortValue(nodeID string, inPortIndex int) IPort {
 	if ctx, ok := gr.context[nodeID]; ok {
 		if inPortIndex >= len(ctx.InputPorts) || inPortIndex < 0 {
 			return nil
@@ -90,7 +98,7 @@ func (gr *graph) GetNodeInPortValue(nodeID string, inPortIndex int) IPort {
 	return nil
 }
 
-func (gr *graph) GetNodeOutPortValue(nodeID string, outPortIndex int) IPort {
+func (gr *Graph) GetNodeOutPortValue(nodeID string, outPortIndex int) IPort {
 	if ctx, ok := gr.context[nodeID]; ok {
 		if outPortIndex >= len(ctx.OutputPorts) || outPortIndex < 0 {
 			return nil
@@ -98,4 +106,11 @@ func (gr *graph) GetNodeOutPortValue(nodeID string, outPortIndex int) IPort {
 		return ctx.OutputPorts[outPortIndex]
 	}
 	return nil
+}
+
+func (gr *Graph) Release() {
+	// 有定时器关闭定时器
+
+	// 清理掉所有数据
+	*gr = Graph{}
 }
