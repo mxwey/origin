@@ -1,6 +1,9 @@
 package blueprint
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/goccy/go-json"
+)
 
 type IGraph interface {
 	Do(entranceID int64, args ...any) error
@@ -38,10 +41,48 @@ type edgeConfig struct {
 	DesPortIndex    int `json:"des_port_index"`
 }
 
+type MultiTypeValue struct {
+	Value interface{}
+}
+
+// 实现json.Unmarshaler接口，自定义解码逻辑
+func (v *MultiTypeValue) UnmarshalJSON(data []byte) error {
+	// 尝试将数据解析为字符串
+	var strVal string
+	if err := json.Unmarshal(data, &strVal); err == nil {
+		v.Value = strVal
+		return nil
+	}
+
+	// 如果不是字符串，尝试解析为数字
+	var intVal int
+	if err := json.Unmarshal(data, &intVal); err == nil {
+		v.Value = intVal
+		return nil
+	}
+
+	// 如果不是字符串，尝试解析为数字
+	var boolVal bool
+	if err := json.Unmarshal(data, &boolVal); err == nil {
+		v.Value = boolVal
+		return nil
+	}
+
+	// 如果不是字符串，尝试解析为数字
+	var float64Val float64
+	if err := json.Unmarshal(data, &float64Val); err == nil {
+		v.Value = float64Val
+		return nil
+	}
+
+	// 如果都失败，返回错误
+	return fmt.Errorf("cannot unmarshal JSON value: %s", string(data))
+}
+
 type variablesConfig struct {
-	Name  string `json:"name"`
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	Name  string         `json:"name"`
+	Type  string         `json:"type"`
+	Value MultiTypeValue `json:"value"`
 }
 
 type graphConfig struct {

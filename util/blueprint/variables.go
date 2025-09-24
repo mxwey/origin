@@ -1,9 +1,13 @@
 package blueprint
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const GetVariables = "GetVar"
 const SetVariables = "SetVar"
+const globalVariablesPrefix = "g_"
 
 type GetVariablesNode struct {
 	BaseExecNode
@@ -22,7 +26,13 @@ func (g *GetVariablesNode) GetName() string {
 }
 
 func (g *GetVariablesNode) Exec() (int, error) {
-	port := g.gr.variables[g.varName]
+	var port IPort
+	if strings.HasPrefix(g.varName, globalVariablesPrefix) {
+		port = g.gr.globalVariables[g.varName]
+	} else {
+		port = g.gr.variables[g.varName]
+	}
+
 	if port == nil {
 		return -1, fmt.Errorf("variable %s not found,node name %s", g.varName, g.nodeName)
 	}
@@ -34,20 +44,37 @@ func (g *GetVariablesNode) Exec() (int, error) {
 	return 0, nil
 }
 
+func (g *GetVariablesNode) setVariableName(name string) bool {
+	g.varName = name
+	return true
+}
+
 func (g *SetVariablesNode) GetName() string {
 	return g.nodeName
 }
 
 func (g *SetVariablesNode) Exec() (int, error) {
-	port := g.GetInPort(0)
+	port := g.GetInPort(1)
 	if port == nil {
 		return -1, fmt.Errorf("get in port failed,node name %s", g.nodeName)
 	}
 
-	g.gr.variables[g.varName] = port
-	if !g.SetOutPort(0, port) {
+	varPort := port.Clone()
+	varPort.SetValue(port)
+	if strings.HasPrefix(g.varName, globalVariablesPrefix) {
+		g.gr.globalVariables[g.varName] = varPort
+	} else {
+		g.gr.variables[g.varName] = varPort
+	}
+
+	if !g.SetOutPort(1, varPort) {
 		return -1, fmt.Errorf("set out port failed,node name %s", g.nodeName)
 	}
 
 	return 0, nil
+}
+
+func (g *SetVariablesNode) setVariableName(name string) bool {
+	g.varName = name
+	return true
 }

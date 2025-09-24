@@ -54,7 +54,7 @@ func (gp *GraphPool) Create(graphName string) IGraph {
 	if !ok {
 		return nil
 	}
-	
+
 	var graph Graph
 	graph.baseGraph = gr
 	graph.context = make(map[string]*ExecContext, 4)
@@ -105,26 +105,26 @@ func (gp *GraphPool) prepareGraph(graphName string, graphConfig *graphConfig) er
 	return nil
 }
 
-func (gp *GraphPool) getVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (IInnerExecNode, string) {
+func (gp *GraphPool) genVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (IInnerExecNode, string) {
 	// 是否为Get_或Set_开头
-	if strings.HasPrefix(nodeCfg.Class, "Get_") || strings.HasPrefix(nodeCfg.Class, "Set_") {
+	if !strings.HasPrefix(nodeCfg.Class, "Get_") && !strings.HasPrefix(nodeCfg.Class, "Set_") {
 		return gp.execPool.GetExec(nodeCfg.Class), ""
 	}
 
 	// 获取Get_或Set_结尾字符串
 	var nodeName string
 	var varName string
-	if strings.HasSuffix(nodeCfg.Class, "Get_") {
+	if strings.HasPrefix(nodeCfg.Class, "Get_") {
 		var typ string
-		varName = strings.TrimSuffix(nodeCfg.Class, "Get_")
+		varName = strings.TrimPrefix(nodeCfg.Class, "Get_")
 		varCfg := graphConfig.GetVariablesByName(varName)
 		if varCfg != nil {
 			typ = varCfg.Type
 		}
 		nodeName = genGetVariablesNodeName(typ)
-	} else if strings.HasSuffix(nodeCfg.Class, "Set_") {
+	} else if strings.HasPrefix(nodeCfg.Class, "Set_") {
 		var typ string
-		varName = strings.TrimSuffix(nodeCfg.Class, "Set_")
+		varName = strings.TrimPrefix(nodeCfg.Class, "Set_")
 		varCfg := graphConfig.GetVariablesByName(varName)
 		if varCfg != nil {
 			typ = varCfg.Type
@@ -132,7 +132,10 @@ func (gp *GraphPool) getVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (
 		nodeName = genSetVariablesNodeName(typ)
 	}
 
-	return gp.execPool.GetExec(nodeName), varName
+	e := gp.execPool.GetExec(nodeName)
+	e.(IExecNode).setVariableName(varName)
+
+	return e, varName
 }
 
 func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode, error) {
@@ -147,7 +150,7 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 		// 获取不到node，则获取变量node
 		exec := gp.execPool.GetExec(className)
 		if exec == nil {
-			exec, varName = gp.getVarExec(&node, graphConfig)
+			exec, varName = gp.genVarExec(&node, graphConfig)
 			if exec == nil {
 				return nil, fmt.Errorf("%s node has not been registered", node.Class)
 			}

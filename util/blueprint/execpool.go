@@ -248,6 +248,9 @@ func (em *ExecPool) loadSysExec() error {
 		return err
 	}
 
+	if err = em.regSetVariables(Config_DataType_Int); err != nil {
+		return err
+	}
 	if err = em.regSetVariables(Config_DataType_Integer); err != nil {
 		return err
 	}
@@ -304,11 +307,13 @@ func (em *ExecPool) regSetVariables(typ string) error {
 	var baseExec innerExecNode
 	baseExec.Name = genSetVariablesNodeName(typ)
 
+	inExecPort := NewPortByType(Config_PortType_Exec)
 	inPort := NewPortByType(typ)
+	outExecPort := NewPortByType(Config_PortType_Exec)
 	outPort := NewPortByType(typ)
 
-	baseExec.AppendInPort(inPort)
-	baseExec.AppendOutPort(outPort)
+	baseExec.AppendInPort(inExecPort, inPort)
+	baseExec.AppendOutPort(outExecPort, outPort)
 
 	baseExec.IExecNode = &SetVariablesNode{nodeName: baseExec.GetName()}
 	if !em.loadBaseExec(&baseExec) {

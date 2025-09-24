@@ -67,6 +67,14 @@ func (en *execNode) doSetInPort(gr *Graph, index int, inPort IPort) error {
 		return nil
 	}
 
+	if _, ok := gr.context[preNode.node.Id]; !ok {
+		// 如果前一个结点没有执行过，则递归执行前一个结点
+		err := preNode.node.Do(gr, nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	// 判断上一个结点是否已经执行过
 	if _, ok := gr.context[preNode.node.Id]; ok {
 		outPort := gr.GetNodeOutPortValue(preNode.node.Id, preNode.outPortIndex)
@@ -78,8 +86,7 @@ func (en *execNode) doSetInPort(gr *Graph, index int, inPort IPort) error {
 		return nil
 	}
 
-	// 如果前一个结点没有执行过，则递归执行前一个结点
-	return preNode.node.Do(gr, nil)
+	return fmt.Errorf("pre node %s not exec", preNode.node.Id)
 }
 
 func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {

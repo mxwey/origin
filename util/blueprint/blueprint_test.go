@@ -53,12 +53,18 @@ func TestExecMgr(t *testing.T) {
 		t.Fatalf("init failed,err:%v", err)
 	}
 
-	graph := bp.Create("test1")
+	graphTest2 := bp.Create("test2")
 
-	err = graph.Do(EntranceID_IntParam, 1, 2, 3)
+	err = graphTest2.Do(EntranceID_IntParam, 1, 2, 3)
 	if err != nil {
-		t.Fatalf("do failed,err:%v", err)
+		t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
 	}
 
-	graph.Release()
+	//graph := bp.Create("test1")
+	//err = graph.Do(EntranceID_IntParam, 1, 2, 3)
+	//if err != nil {
+	//	t.Fatalf("do failed,err:%v", err)
+	//}
+
+	//graph.Release()
 }

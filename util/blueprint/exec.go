@@ -29,6 +29,8 @@ type IExecNode interface {
 	Exec() (int, error) // 返回后续执行的Node的Index
 	GetNextExecLen() int
 	getInnerExecNode() IInnerExecNode
+
+	setVariableName(name string) bool
 }
 
 type innerExecNode struct {
@@ -223,7 +225,7 @@ func (en *BaseExecNode) SetOutPort(index int, val IPort) bool {
 	if index >= len(en.OutputPorts) || index < 0 {
 		return false
 	}
-	en.OutputPorts[index] = val
+	en.OutputPorts[index].SetValue(val)
 	return true
 }
 
@@ -487,4 +489,8 @@ func (en *BaseExecNode) GetNextExecLen() int {
 
 func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
 	return en.innerExecNode.IExecNode.(IInnerExecNode)
+}
+
+func (en *BaseExecNode) setVariableName(name string) bool {
+	return false
 }
