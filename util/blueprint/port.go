@@ -80,6 +80,13 @@ func (em *Port[T]) GetBool() (Port_Bool, bool) {
 	return false, false
 }
 
+func (em *Port[T]) GetArray() (Port_Array, bool) {
+	if t, ok := any(em.PortVal).(Port_Array); ok {
+		return t, true
+	}
+	return nil, false
+}
+
 func (em *Port[T]) SetInt(val Port_Int) bool {
 	if t, ok := any(&em.PortVal).(*Port_Int); ok {
 		*t = val
@@ -148,9 +155,9 @@ func (em *Port[T]) AppendArrayValStr(val Port_Str) bool {
 	return false
 }
 
-func (em *Port[T]) GetArrayLen() int {
+func (em *Port[T]) GetArrayLen() Port_Int {
 	if t, ok := any(&em.PortVal).(*Port_Array); ok {
-		return len(*t)
+		return Port_Int(len(*t))
 	}
 
 	return 0
@@ -262,6 +269,51 @@ func (em *Port[T]) setAnyVale(v any) error {
 		default:
 			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)
 		}
+	case []int64:
+		arr := v.([]int64)
+		for _, val := range arr {
+			em.AppendArrayValInt(val)
+		}
+	case []int32:
+		arr := v.([]int32)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []int16:
+		arr := v.([]int16)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []int8:
+		arr := v.([]int8)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []uint64:
+		arr := v.([]uint64)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []uint32:
+		arr := v.([]uint32)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []uint16:
+		arr := v.([]uint16)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []uint8:
+		arr := v.([]uint8)
+		for _, val := range arr {
+			em.AppendArrayValInt(Port_Int(val))
+		}
+	case []string:
+		arr := v.([]string)
+		for _, val := range arr {
+			em.AppendArrayValStr(val)
+		}
 	}
 
 	return nil
@@ -283,6 +335,7 @@ type IPort interface {
 	GetArrayValInt(idx int) (Port_Int, bool)
 	GetArrayValStr(idx int) (Port_Str, bool)
 	GetBool() (Port_Bool, bool)
+	GetArray() (Port_Array, bool)
 
 	SetInt(val Port_Int) bool
 	SetFloat(val Port_Float) bool
@@ -292,7 +345,7 @@ type IPort interface {
 	SetArrayValStr(idx int, val Port_Str) bool
 	AppendArrayValInt(val Port_Int) bool
 	AppendArrayValStr(val Port_Str) bool
-	GetArrayLen() int
+	GetArrayLen() Port_Int
 	Clone() IPort
 	Reset()
 

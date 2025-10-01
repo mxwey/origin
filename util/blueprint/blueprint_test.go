@@ -1,64 +1,35 @@
 package blueprint
 
 import (
-	"fmt"
 	"testing"
 )
 
-type Entrance_IntParam struct {
-	BaseExecNode
-}
-
-func (em *Entrance_IntParam) GetName() string {
-	return "Entrance_IntParam"
-}
-
-func (em *Entrance_IntParam) Exec() (int, error) {
-	return 0, nil
-}
-
-type Output struct {
-	BaseExecNode
-}
-
-func (em *Output) GetName() string {
-	return "Output"
-}
-
-func (em *Output) Exec() (int, error) {
-	val, ok := em.GetInPortInt(1)
-	if !ok {
-		return 0, fmt.Errorf("Output Exec inParam not found")
-	}
-
-	fmt.Printf("Output Exec inParam %d", val)
-	return 0, nil
-}
-
-func OnRegister(bm *ExecPool) error {
-	bm.Register(&Entrance_IntParam{})
-	bm.Register(&Output{})
-	return nil
-}
-
-const (
-	EntranceID_IntParam = 3
-)
-
 func TestExecMgr(t *testing.T) {
-	//
+
 	var bp Blueprint
-	err := bp.Init("./json/", "./vgf/", OnRegister)
+	err := bp.Init("D:\\Develop\\OriginNodeEditor\\json", "D:\\Develop\\OriginNodeEditor\\vgf")
 	if err != nil {
 		t.Fatalf("init failed,err:%v", err)
 	}
 
-	graphTest2 := bp.Create("test2")
-
-	err = graphTest2.Do(EntranceID_IntParam, 1, 2, 3)
+	graphTest1 := bp.Create("testArray")
+	err = graphTest1.Do(EntranceID_ArrayParam, 1, []int64{10, 11, 12})
 	if err != nil {
 		t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
 	}
+
+	//graphTest2 := bp.Create("testForeach")
+	//err = graphTest2.Do(EntranceID_IntParam, 1, 2, 3)
+	//if err != nil {
+	//	t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
+	//}
+
+	//graphTest2 := bp.Create("test2")
+	//
+	//err = graphTest2.Do(EntranceID_IntParam, 1, 2, 3)
+	//if err != nil {
+	//	t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
+	//}
 
 	//graph := bp.Create("test1")
 	//err = graph.Do(EntranceID_IntParam, 1, 2, 3)

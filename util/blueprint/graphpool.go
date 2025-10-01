@@ -182,6 +182,7 @@ func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *
 		if nextExecNode == nil {
 			continue
 		}
+		nextExecNode.beConnect = true
 		nodeExec.nextNode = append(nodeExec.nextNode, nextExecNode)
 	}
 
@@ -222,13 +223,14 @@ func (gp *GraphPool) prepareOneEntrance(graphName string, entranceID int64, node
 		return fmt.Errorf("entrance node %s not found", nodeCfg.Id)
 	}
 
+	nodeExec.isEntrance = true
 	err = gp.prepareOneNode(mapNodes, nodeExec, graphConfig, new(int))
 	if err != nil {
 		return err
 	}
 
 	// 处理inPort前置结点
-	err = gp.prepareInPort(mapNodes, nodeExec, graphConfig)
+	err = gp.prepareInPort(mapNodes, graphConfig)
 	if err != nil {
 		return err
 	}
@@ -283,19 +285,10 @@ func (gp *GraphPool) preparePreInPortNode(mapNodes map[string]*execNode, nodeExe
 	return nil
 }
 
-func (gp *GraphPool) prepareInPort(mapNodeExec map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig) error {
-	for _, nextNode := range nodeExec.nextNode {
-		if nextNode == nil {
-			continue
-		}
-
-		// 对nextNode结点的入口进行预处理
-		err := gp.preparePreInPortNode(mapNodeExec, nextNode, graphConfig)
-		if err != nil {
-			return err
-		}
-
-		err = gp.prepareInPort(mapNodeExec, nextNode, graphConfig)
+func (gp *GraphPool) prepareInPort(mapNodeExec map[string]*execNode, graphConfig *graphConfig) error {
+	for _, e := range mapNodeExec {
+		// 对当前结点的入口进行预处理
+		err := gp.preparePreInPortNode(mapNodeExec, e, graphConfig)
 		if err != nil {
 			return err
 		}

@@ -39,11 +39,12 @@ type innerExecNode struct {
 	Package     string
 	Description string
 
-	InPort  []IPort
-	OutPort []IPort
+	inPort  []IPort
+	outPort []IPort
 
 	inPortParamStartIndex  int // 输入参数的起始索引,用于排除执行入口
 	outPortParamStartIndex int // 输出参数的起始索引,用于排除执行出口
+
 	IExecNode
 }
 
@@ -82,28 +83,28 @@ type BaseExecConfig struct {
 }
 
 func (em *innerExecNode) AppendInPort(port ...IPort) {
-	if len(em.InPort) == 0 {
+	if len(em.inPort) == 0 {
 		em.inPortParamStartIndex = -1
 	}
 
 	for i := 0; i < len(port); i++ {
 		if !port[i].IsPortExec() && em.inPortParamStartIndex < 0 {
-			em.inPortParamStartIndex = len(em.InPort)
+			em.inPortParamStartIndex = len(em.inPort)
 		}
 
-		em.InPort = append(em.InPort, port[i])
+		em.inPort = append(em.inPort, port[i])
 	}
 }
 
 func (em *innerExecNode) AppendOutPort(port ...IPort) {
-	if len(em.OutPort) == 0 {
+	if len(em.outPort) == 0 {
 		em.outPortParamStartIndex = -1
 	}
 	for i := 0; i < len(port); i++ {
 		if !port[i].IsPortExec() && em.outPortParamStartIndex < 0 {
-			em.outPortParamStartIndex = len(em.OutPort)
+			em.outPortParamStartIndex = len(em.outPort)
 		}
-		em.OutPort = append(em.OutPort, port[i])
+		em.outPort = append(em.outPort, port[i])
 	}
 }
 
@@ -117,7 +118,7 @@ func (em *innerExecNode) SetExec(exec IExecNode) {
 
 func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	inPorts := make([]IPort, 0, 2)
-	for _, port := range em.InPort {
+	for _, port := range em.inPort {
 		if port.IsPortExec() {
 			// 执行入口, 不需要克隆,占位处理
 			inPorts = append(inPorts, nil)
@@ -128,7 +129,7 @@ func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	}
 	outPorts := make([]IPort, 0, 2)
 
-	for _, port := range em.OutPort {
+	for _, port := range em.outPort {
 		if port.IsPortExec() {
 			outPorts = append(outPorts, nil)
 			continue
@@ -140,40 +141,40 @@ func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 }
 
 func (em *innerExecNode) IsInPortExec(index int) bool {
-	if index >= len(em.InPort) || index < 0 {
+	if index >= len(em.inPort) || index < 0 {
 		return false
 	}
 
-	return em.InPort[index].IsPortExec()
+	return em.inPort[index].IsPortExec()
 }
 func (em *innerExecNode) IsOutPortExec(index int) bool {
-	if index >= len(em.OutPort) || index < 0 {
+	if index >= len(em.outPort) || index < 0 {
 		return false
 	}
 
-	return em.OutPort[index].IsPortExec()
+	return em.outPort[index].IsPortExec()
 }
 
 func (em *innerExecNode) GetInPortCount() int {
-	return len(em.InPort)
+	return len(em.inPort)
 }
 
 func (em *innerExecNode) GetOutPortCount() int {
-	return len(em.OutPort)
+	return len(em.outPort)
 }
 
 func (em *innerExecNode) GetInPort(index int) IPort {
-	if index >= len(em.InPort) || index < 0 {
+	if index >= len(em.inPort) || index < 0 {
 		return nil
 	}
-	return em.InPort[index]
+	return em.inPort[index]
 }
 
 func (em *innerExecNode) GetOutPort(index int) IPort {
-	if index >= len(em.OutPort) || index < 0 {
+	if index >= len(em.outPort) || index < 0 {
 		return nil
 	}
-	return em.OutPort[index]
+	return em.outPort[index]
 }
 
 func (em *innerExecNode) GetInPortParamStartIndex() int {
@@ -390,7 +391,7 @@ func (en *BaseExecNode) AppendInPortArrayValStr(index int, val Port_Str) bool {
 	return port.AppendArrayValStr(val)
 }
 
-func (en *BaseExecNode) GetInPortArrayLen(index int) int {
+func (en *BaseExecNode) GetInPortArrayLen(index int) Port_Int {
 	port := en.GetInPort(index)
 	if port == nil {
 		return 0
@@ -462,7 +463,7 @@ func (en *BaseExecNode) AppendOutPortArrayValStr(index int, val Port_Str) bool {
 	return port.AppendArrayValStr(val)
 }
 
-func (en *BaseExecNode) GetOutPortArrayLen(index int) int {
+func (en *BaseExecNode) GetOutPortArrayLen(index int) Port_Int {
 	port := en.GetOutPort(index)
 	if port == nil {
 		return 0

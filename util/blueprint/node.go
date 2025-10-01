@@ -1,6 +1,8 @@
 package blueprint
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type prePortNode struct {
 	node         *execNode // 上个结点
@@ -18,6 +20,23 @@ type execNode struct {
 	inPortDefaultValue map[string]any
 
 	variableName string // 如果是变量，则有变量名
+	beConnect    bool   // 是否有被连线
+	isEntrance   bool   // 是否是入口结点
+}
+
+// HasBeConnectLine 是否有被连线
+func (en *execNode) HasBeConnectLine() bool {
+	return en.beConnect
+}
+
+// HasInPortExec 有前置执行入口
+func (en *execNode) HasInPortExec() bool {
+	return en.execNode.IsInPortExec(0)
+}
+
+// HasOutPortExec 有前置执行入口
+func (en *execNode) HasOutPortExec() bool {
+	return en.execNode.IsOutPortExec(0)
 }
 
 func (en *execNode) GetInPortDefaultValue(index int) any {
@@ -52,6 +71,7 @@ func (en *execNode) exec(gr *Graph) (int, error) {
 		return -1, err
 	}
 
+	//log.Debug("exec node %s", en.execNode.GetName())
 	return e.Exec()
 }
 
@@ -67,9 +87,10 @@ func (en *execNode) doSetInPort(gr *Graph, index int, inPort IPort) error {
 		return nil
 	}
 
-	if _, ok := gr.context[preNode.node.Id]; !ok {
+	if _, ok := gr.context[preNode.node.Id]; !ok ||
+		(!preNode.node.HasBeConnectLine() && !preNode.node.isEntrance) {
 		// 如果前一个结点没有执行过，则递归执行前一个结点
-		err := preNode.node.Do(gr, nil)
+		err := preNode.node.Do(gr)
 		if err != nil {
 			return err
 		}
