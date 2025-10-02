@@ -5,15 +5,14 @@ import (
 )
 
 func TestExecMgr(t *testing.T) {
-
 	var bp Blueprint
 	err := bp.Init("D:\\Develop\\OriginNodeEditor\\json", "D:\\Develop\\OriginNodeEditor\\vgf")
 	if err != nil {
 		t.Fatalf("init failed,err:%v", err)
 	}
 
-	graphTest1 := bp.Create("testArray")
-	err = graphTest1.Do(EntranceID_ArrayParam, 1, []int64{10, 11, 12})
+	graphTest1 := bp.Create("testMath")
+	err = graphTest1.Do(EntranceID_IntParam, 1, 2, 3)
 	if err != nil {
 		t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
 	}

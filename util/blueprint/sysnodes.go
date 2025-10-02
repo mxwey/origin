@@ -8,7 +8,7 @@ import (
 // 系统入口ID定义，1000以内
 const (
 	EntranceID_ArrayParam = 2
-	EntranceID_IntParam   = 3
+	EntranceID_IntParam   = 1
 )
 
 func init() {
@@ -60,7 +60,7 @@ func (em *Output) Exec() (int, error) {
 		return 0, fmt.Errorf("Output Exec inParam not found")
 	}
 
-	fmt.Printf("Output Exec inParam %d", val)
+	fmt.Printf("Output Exec inParam %d\n", val)
 	return 0, nil
 }
 

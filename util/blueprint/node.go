@@ -71,7 +71,20 @@ func (en *execNode) exec(gr *Graph) (int, error) {
 		return -1, err
 	}
 
-	//log.Debug("exec node %s", en.execNode.GetName())
+	defer func() {
+		inPort, outPort := node.GetPorts()
+		debugString := "inPort:"
+		for i := 0; i < len(inPort); i++ {
+			debugString += fmt.Sprintf("%+v,", inPort[i])
+		}
+		debugString += "   outPort:"
+		for i := 0; i < len(outPort); i++ {
+			debugString += fmt.Sprintf("%+v,", outPort[i])
+		}
+
+		fmt.Printf("exec node %s,%s\n", en.execNode.GetName(), debugString)
+	}()
+
 	return e.Exec()
 }
 
@@ -158,5 +171,8 @@ func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {
 		return fmt.Errorf("next index %d not found", nextIndex)
 	}
 
+	if en.nextNode[nextIndex] == nil {
+		return nil
+	}
 	return en.nextNode[nextIndex].Do(gr)
 }

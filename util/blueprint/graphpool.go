@@ -179,15 +179,17 @@ func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *
 	for ; nodeExec.execNode.IsOutPortExec(idx) && idx < nodeExec.execNode.GetOutPortCount(); idx++ {
 		// 找到出口结点
 		nextExecNode := gp.findOutNextNode(graphConfig, mapNodeExec, nodeExec.Id, idx)
-		if nextExecNode == nil {
-			continue
-		}
-		nextExecNode.beConnect = true
 		nodeExec.nextNode = append(nodeExec.nextNode, nextExecNode)
+		if nextExecNode != nil {
+			nextExecNode.beConnect = true
+		}
 	}
 
 	// 将所有的next填充next
 	for _, nextOne := range nodeExec.nextNode {
+		if nextOne == nil {
+			continue
+		}
 		// 对出口进行预处理
 		err := gp.prepareOneNode(mapNodeExec, nextOne, graphConfig, recursion)
 		if err != nil {

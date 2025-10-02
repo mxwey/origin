@@ -5,6 +5,7 @@ import "fmt"
 type IBaseExecNode interface {
 	initInnerExecNode(innerNode *innerExecNode)
 	initExecNode(gr *Graph, en *execNode) error
+	GetPorts() ([]IPort, []IPort)
 }
 
 type IInnerExecNode interface {
@@ -147,6 +148,7 @@ func (em *innerExecNode) IsInPortExec(index int) bool {
 
 	return em.inPort[index].IsPortExec()
 }
+
 func (em *innerExecNode) IsOutPortExec(index int) bool {
 	if index >= len(em.outPort) || index < 0 {
 		return false
@@ -199,6 +201,10 @@ func (en *BaseExecNode) initExecNode(gr *Graph, node *execNode) error {
 	en.gr = gr
 	en.execNode = node
 	return nil
+}
+
+func (en *BaseExecNode) GetPorts() ([]IPort, []IPort) {
+	return en.InputPorts, en.OutputPorts
 }
 
 func (en *BaseExecNode) GetInPort(index int) IPort {
@@ -479,6 +485,10 @@ func (en *BaseExecNode) DoNext(index int) error {
 
 	if index < 0 || index >= len(en.execNode.nextNode) {
 		return fmt.Errorf("next index %d not found", index)
+	}
+
+	if en.execNode.nextNode[index] == nil {
+		return nil
 	}
 
 	return en.execNode.nextNode[index].Do(en.gr)
