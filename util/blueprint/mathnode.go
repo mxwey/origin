@@ -1,6 +1,9 @@
 package blueprint
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 func init() {
 	RegExecNode(&AddInt{})
@@ -233,5 +236,62 @@ func (em *ModInt) Exec() (int, error) {
 
 	outPortRet.SetInt(inA % inB)
 
+	return -1, nil
+}
+
+type RandNumber struct {
+	BaseExecNode
+}
+
+func (em *RandNumber) GetName() string {
+	return "RandNumber"
+}
+
+func (em *RandNumber) Exec() (int, error) {
+	inPortSeed := em.GetInPort(0)
+	if inPortSeed == nil {
+		return -1, fmt.Errorf("AddInt inParam 1 not found")
+	}
+
+	inPortMin := em.GetInPort(1)
+	if inPortMin == nil {
+		return -1, fmt.Errorf("AddInt inParam 2 not found")
+	}
+
+	inPortMax := em.GetInPort(2)
+	if inPortMax == nil {
+		return -1, fmt.Errorf("AddInt inParam 2 not found")
+	}
+
+	outPortRet := em.GetOutPort(0)
+	if outPortRet == nil {
+		return -1, fmt.Errorf("AddInt outParam not found")
+	}
+
+	inSeed, ok := inPortSeed.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("AddInt inParam 1 not found")
+	}
+	inMin, ok := inPortMin.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("AddInt inParam 2 not found")
+	}
+	inMax, ok := inPortMax.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("AddInt inParam 2 not found")
+	}
+
+	var ret int64
+	if inSeed > 0 {
+		r := rand.New(rand.NewSource(inSeed))
+		if r == nil {
+			return -1, fmt.Errorf("RandNumber fail")
+		}
+		ret = int64(r.Intn(int(inMax-inMin+1))) + inMin
+	} else {
+		ret = int64(rand.Intn(int(inMax-inMin+1))) + inMin
+	}
+
+	outPortRet.SetInt(ret)
 	return -1, nil
 }

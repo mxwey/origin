@@ -48,6 +48,24 @@ func (en *execNode) GetInPortDefaultValue(index int) any {
 	return v
 }
 
+func (en *execNode) GetInPortDefaultIntArrayValue(index int) []int64 {
+	val := en.GetInPortDefaultValue(index)
+	if val == nil {
+		return nil
+	}
+
+	return val.([]int64)
+}
+
+func (en *execNode) GetInPortDefaultStringArrayValue(index int) []string {
+	val := en.GetInPortDefaultValue(index)
+	if val == nil {
+		return nil
+	}
+
+	return val.([]string)
+}
+
 func (en *execNode) Next() *execNode {
 	if en.nextIdx >= len(en.nextNode) {
 		return nil

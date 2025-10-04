@@ -3,6 +3,7 @@ package blueprint
 import (
 	"fmt"
 	"github.com/duanhf2012/origin/v2/log"
+	"math/rand/v2"
 )
 
 // 系统入口ID定义，1000以内
@@ -173,16 +174,16 @@ func (em *GetArrayString) GetName() string {
 func (em *GetArrayString) Exec() (int, error) {
 	inPort := em.GetInPort(0)
 	if inPort == nil {
-		return -1, fmt.Errorf("GetArrayInt inParam not found")
+		return -1, fmt.Errorf("GetArrayInt inParam 0 not found")
 	}
 	outPort := em.GetOutPort(0)
 	if outPort == nil {
-		return -1, fmt.Errorf("GetArrayInt outParam not found")
+		return -1, fmt.Errorf("GetArrayInt outParam 0 not found")
 	}
 
 	arrIndexPort := em.GetInPort(1)
 	if arrIndexPort == nil {
-		return -1, fmt.Errorf("GetArrayInt arrIndexParam not found")
+		return -1, fmt.Errorf("GetArrayInt arrIndexParam 1 not found")
 	}
 	arrIndex, ok := arrIndexPort.GetInt()
 	if !ok {
@@ -214,13 +215,235 @@ func (em *GetArrayLen) GetName() string {
 func (em *GetArrayLen) Exec() (int, error) {
 	inPort := em.GetInPort(0)
 	if inPort == nil {
-		return -1, fmt.Errorf("GetArrayInt inParam not found")
+		return -1, fmt.Errorf("GetArrayInt inParam 0 not found")
 	}
 	outPort := em.GetOutPort(0)
 	if outPort == nil {
-		return -1, fmt.Errorf("GetArrayInt outParam not found")
+		return -1, fmt.Errorf("GetArrayInt outParam 0 not found")
 	}
 
 	outPort.SetInt(inPort.GetArrayLen())
 	return -1, nil
+}
+
+type BoolIf struct {
+	BaseExecNode
+}
+
+func (em *BoolIf) GetName() string {
+	return "BoolIf"
+}
+
+func (em *BoolIf) Exec() (int, error) {
+	inPort := em.GetInPort(1)
+	if inPort == nil {
+		return -1, fmt.Errorf("GetArrayInt inParam 1 not found")
+	}
+
+	ret, ok := inPort.GetBool()
+	if !ok {
+		return -1, fmt.Errorf("BoolIf inParam error")
+	}
+
+	if ret {
+		return 1, nil
+	}
+
+	return 0, nil
+}
+
+type GreaterThanInteger struct {
+	BaseExecNode
+}
+
+func (em *GreaterThanInteger) GetName() string {
+	return "GreaterThanInteger"
+}
+
+func (em *GreaterThanInteger) Exec() (int, error) {
+	inPortEqual := em.GetInPort(1)
+	if inPortEqual == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inPortA := em.GetInPort(2)
+	if inPortA == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inPorB := em.GetInPort(3)
+	if inPorB == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	ret, ok := inPortEqual.GetBool()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 error")
+	}
+
+	inA, ok := inPortA.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 2 error")
+	}
+	inB, ok := inPorB.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 3 error")
+	}
+	if ret {
+		if inA >= inB {
+			return 1, nil
+		}
+		return 0, nil
+	}
+
+	if inA > inB {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+type LessThanInteger struct {
+	BaseExecNode
+}
+
+func (em *LessThanInteger) GetName() string {
+	return "LessThanInteger"
+}
+
+func (em *LessThanInteger) Exec() (int, error) {
+	inPortEqual := em.GetInPort(1)
+	if inPortEqual == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inPortA := em.GetInPort(2)
+	if inPortA == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inPorB := em.GetInPort(3)
+	if inPorB == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	ret, ok := inPortEqual.GetBool()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 error")
+	}
+
+	inA, ok := inPortA.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 2 error")
+	}
+	inB, ok := inPorB.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 3 error")
+	}
+	if ret {
+		if inA <= inB {
+			return 1, nil
+		}
+		return 0, nil
+	}
+
+	if inA < inB {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+type EqualInteger struct {
+	BaseExecNode
+}
+
+func (em *EqualInteger) GetName() string {
+	return "EqualInteger"
+}
+
+func (em *EqualInteger) Exec() (int, error) {
+
+	inPortA := em.GetInPort(1)
+	if inPortA == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inPorB := em.GetInPort(2)
+	if inPorB == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inA, ok := inPortA.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 2 error")
+	}
+	inB, ok := inPorB.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 3 error")
+	}
+
+	if inA == inB {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+type RangeCompare struct {
+	BaseExecNode
+}
+
+func (em *RangeCompare) GetName() string {
+	return "RangeCompare"
+}
+
+func (em *RangeCompare) Exec() (int, error) {
+
+	inPortA := em.GetInPort(1)
+	if inPortA == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	ret, ok := inPortA.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 error")
+	}
+
+	intArray := em.execNode.GetInPortDefaultIntArrayValue(2)
+	if intArray == nil {
+		return 0, nil
+	}
+
+	for i := range intArray {
+		if intArray[i] <= ret {
+			return i + 2, nil
+		}
+	}
+
+	return 0, nil
+}
+
+type Probability struct {
+	BaseExecNode
+}
+
+func (em *Probability) GetName() string {
+	return "Probability"
+}
+
+func (em *Probability) Exec() (int, error) {
+
+	inPortProbability := em.GetInPort(1)
+	if inPortProbability == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	inProbability, ok := inPortProbability.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 error")
+	}
+
+	if inProbability > rand.Int64N(10000) {
+		return 1, nil
+	}
+
+	return 0, nil
 }
