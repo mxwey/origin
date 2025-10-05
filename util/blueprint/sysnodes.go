@@ -21,6 +21,13 @@ func init() {
 	RegExecNode(&GetArrayInt{})
 	RegExecNode(&GetArrayString{})
 	RegExecNode(&GetArrayLen{})
+
+	RegExecNode(&BoolIf{})
+	RegExecNode(&GreaterThanInteger{})
+	RegExecNode(&LessThanInteger{})
+	RegExecNode(&EqualInteger{})
+	RegExecNode(&RangeCompare{})
+	RegExecNode(&Probability{})
 }
 
 type Entrance_ArrayParam struct {
@@ -226,6 +233,7 @@ func (em *GetArrayLen) Exec() (int, error) {
 	return -1, nil
 }
 
+// BoolIf 布尔判断
 type BoolIf struct {
 	BaseExecNode
 }
@@ -252,6 +260,7 @@ func (em *BoolIf) Exec() (int, error) {
 	return 0, nil
 }
 
+// GreaterThanInteger 大于(整型) >
 type GreaterThanInteger struct {
 	BaseExecNode
 }
@@ -302,6 +311,7 @@ func (em *GreaterThanInteger) Exec() (int, error) {
 	return 0, nil
 }
 
+// LessThanInteger 小于(整型) <
 type LessThanInteger struct {
 	BaseExecNode
 }
@@ -352,6 +362,7 @@ func (em *LessThanInteger) Exec() (int, error) {
 	return 0, nil
 }
 
+// EqualInteger 等于(整型)==
 type EqualInteger struct {
 	BaseExecNode
 }
@@ -387,6 +398,7 @@ func (em *EqualInteger) Exec() (int, error) {
 	return 0, nil
 }
 
+// RangeCompare 范围比较<=
 type RangeCompare struct {
 	BaseExecNode
 }
@@ -421,6 +433,7 @@ func (em *RangeCompare) Exec() (int, error) {
 	return 0, nil
 }
 
+// Probability 概率判断(万分比)
 type Probability struct {
 	BaseExecNode
 }
@@ -430,7 +443,6 @@ func (em *Probability) GetName() string {
 }
 
 func (em *Probability) Exec() (int, error) {
-
 	inPortProbability := em.GetInPort(1)
 	if inPortProbability == nil {
 		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")

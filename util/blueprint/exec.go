@@ -478,6 +478,15 @@ func (en *BaseExecNode) GetOutPortArrayLen(index int) Port_Int {
 }
 
 func (en *BaseExecNode) DoNext(index int) error {
+	// 记录之前的上下文，执行完后需要恢复
+	preExContext := en.ExecContext
+	preExecNode := en.execNode
+	
+	defer func() {
+		en.ExecContext = preExContext
+		en.execNode = preExecNode
+	}()
+
 	// -1 表示中断运行
 	if index == -1 {
 		return nil

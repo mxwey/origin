@@ -11,8 +11,10 @@ func init() {
 	RegExecNode(&MulInt{})
 	RegExecNode(&DivInt{})
 	RegExecNode(&ModInt{})
+	RegExecNode(&RandNumber{})
 }
 
+// AddInt 加(int)
 type AddInt struct {
 	BaseExecNode
 }
@@ -51,6 +53,7 @@ func (em *AddInt) Exec() (int, error) {
 	return -1, nil
 }
 
+// SubInt 减(int)
 type SubInt struct {
 	BaseExecNode
 }
@@ -102,6 +105,7 @@ func (em *SubInt) Exec() (int, error) {
 	return -1, nil
 }
 
+// MulInt 乘(int)
 type MulInt struct {
 	BaseExecNode
 }
@@ -140,6 +144,7 @@ func (em *MulInt) Exec() (int, error) {
 	return -1, nil
 }
 
+// DivInt 除(int)
 type DivInt struct {
 	BaseExecNode
 }
@@ -198,6 +203,7 @@ func (em *DivInt) Exec() (int, error) {
 	return -1, nil
 }
 
+// ModInt 取模(int)
 type ModInt struct {
 	BaseExecNode
 }
@@ -239,6 +245,7 @@ func (em *ModInt) Exec() (int, error) {
 	return -1, nil
 }
 
+// RandNumber 范围随机[0,99]
 type RandNumber struct {
 	BaseExecNode
 }

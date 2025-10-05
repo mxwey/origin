@@ -89,19 +89,19 @@ func (en *execNode) exec(gr *Graph) (int, error) {
 		return -1, err
 	}
 
-	defer func() {
-		inPort, outPort := node.GetPorts()
-		debugString := "inPort:"
-		for i := 0; i < len(inPort); i++ {
-			debugString += fmt.Sprintf("%+v,", inPort[i])
-		}
-		debugString += "   outPort:"
-		for i := 0; i < len(outPort); i++ {
-			debugString += fmt.Sprintf("%+v,", outPort[i])
-		}
+	//defer func() {
+	inPort, outPort := node.GetPorts()
+	debugString := "inPort:"
+	for i := 0; i < len(inPort); i++ {
+		debugString += fmt.Sprintf("%+v,", inPort[i])
+	}
+	debugString += "   outPort:"
+	for i := 0; i < len(outPort); i++ {
+		debugString += fmt.Sprintf("%+v,", outPort[i])
+	}
 
-		fmt.Printf("exec node %s,%s\n", en.execNode.GetName(), debugString)
-	}()
+	fmt.Printf("exec node %s,%s\n", en.execNode.GetName(), debugString)
+	//}()
 
 	return e.Exec()
 }

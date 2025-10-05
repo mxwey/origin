@@ -11,8 +11,8 @@ func TestExecMgr(t *testing.T) {
 		t.Fatalf("init failed,err:%v", err)
 	}
 
-	graphTest1 := bp.Create("testMath")
-	err = graphTest1.Do(EntranceID_IntParam, 1, 2, 3)
+	graphTest1 := bp.Create("testSwitch")
+	err = graphTest1.Do(EntranceID_IntParam, 2, 1, 3)
 	if err != nil {
 		t.Fatalf("Do EntranceID_IntParam failed,err:%v", err)
 	}
