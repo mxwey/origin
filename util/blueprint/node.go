@@ -85,6 +85,12 @@ func (en *execNode) exec(gr *Graph) (int, error) {
 		return -1, fmt.Errorf("exec node %s not exec", en.execNode.GetName())
 	}
 
+	// 执行完，要恢复上下文，结点的BaseExecNode会被执行时修改
+	ctx, exNode := node.getExecNodeInfo()
+	defer func() {
+		node.setExecNodeInfo(ctx, exNode)
+	}()
+
 	if err := node.initExecNode(gr, en); err != nil {
 		return -1, err
 	}

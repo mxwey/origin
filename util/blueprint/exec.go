@@ -6,6 +6,8 @@ type IBaseExecNode interface {
 	initInnerExecNode(innerNode *innerExecNode)
 	initExecNode(gr *Graph, en *execNode) error
 	GetPorts() ([]IPort, []IPort)
+	getExecNodeInfo() (*ExecContext, *execNode)
+	setExecNodeInfo(gr *ExecContext, en *execNode)
 }
 
 type IInnerExecNode interface {
@@ -189,6 +191,15 @@ func (em *innerExecNode) GetOutPortParamStartIndex() int {
 
 func (en *BaseExecNode) initInnerExecNode(innerNode *innerExecNode) {
 	en.innerExecNode = innerNode
+}
+
+func (en *BaseExecNode) getExecNodeInfo() (*ExecContext, *execNode) {
+	return en.ExecContext, en.execNode
+}
+
+func (en *BaseExecNode) setExecNodeInfo(c *ExecContext, e *execNode) {
+	en.ExecContext = c
+	en.execNode = e
 }
 
 func (en *BaseExecNode) initExecNode(gr *Graph, node *execNode) error {
@@ -478,15 +489,6 @@ func (en *BaseExecNode) GetOutPortArrayLen(index int) Port_Int {
 }
 
 func (en *BaseExecNode) DoNext(index int) error {
-	// 记录之前的上下文，执行完后需要恢复
-	preExContext := en.ExecContext
-	preExecNode := en.execNode
-	
-	defer func() {
-		en.ExecContext = preExContext
-		en.execNode = preExecNode
-	}()
-
 	// -1 表示中断运行
 	if index == -1 {
 		return nil
