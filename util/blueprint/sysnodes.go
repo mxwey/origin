@@ -21,6 +21,10 @@ func init() {
 	RegExecNode(&GetArrayInt{})
 	RegExecNode(&GetArrayString{})
 	RegExecNode(&GetArrayLen{})
+	RegExecNode(&CreateIntArray{})
+	RegExecNode(&CreateStringArray{})
+	RegExecNode(&AppendIntegerToArray{})
+	RegExecNode(&AppendStringToArray{})
 
 	RegExecNode(&BoolIf{})
 	RegExecNode(&GreaterThanInteger{})
@@ -457,4 +461,137 @@ func (em *Probability) Exec() (int, error) {
 	}
 
 	return 0, nil
+}
+
+// CreateIntArray 创建整型数组
+type CreateIntArray struct {
+	BaseExecNode
+}
+
+func (em *CreateIntArray) GetName() string {
+	return "CreateIntArray"
+}
+
+func (em *CreateIntArray) Exec() (int, error) {
+	intArray := em.execNode.GetInPortDefaultIntArrayValue(0)
+	if intArray == nil {
+		return -1, fmt.Errorf("CreateIntArray inParam 0 not found")
+	}
+
+	outPort := em.GetOutPort(0)
+	if outPort == nil {
+		return -1, fmt.Errorf("GetArrayInt outParam 0 not found")
+	}
+
+	for _, v := range intArray {
+		outPort.AppendArrayValInt(v)
+	}
+
+	return -1, nil
+}
+
+// CreateStringArray 创建字符串数组
+type CreateStringArray struct {
+	BaseExecNode
+}
+
+func (em *CreateStringArray) GetName() string {
+	return "CreateStringArray"
+}
+
+func (em *CreateStringArray) Exec() (int, error) {
+	intArray := em.execNode.GetInPortDefaultStringArrayValue(0)
+	if intArray == nil {
+		return -1, fmt.Errorf("CreateIntArray inParam 0 not found")
+	}
+
+	outPort := em.GetOutPort(0)
+	if outPort == nil {
+		return -1, fmt.Errorf("GetArrayInt outParam 0 not found")
+	}
+
+	for _, v := range intArray {
+		outPort.AppendArrayValStr(v)
+	}
+
+	return -1, nil
+}
+
+// AppendIntegerToArray 数组追加整型
+type AppendIntegerToArray struct {
+	BaseExecNode
+}
+
+func (em *AppendIntegerToArray) GetName() string {
+	return "AppendIntegerToArray"
+}
+
+func (em *AppendIntegerToArray) Exec() (int, error) {
+	inPortArray := em.GetInPort(0)
+	if inPortArray == nil {
+		return -1, fmt.Errorf("AppendIntegerToArray inParam 0 not found")
+	}
+
+	inPortVal := em.GetInPort(1)
+	if inPortVal == nil {
+		return -1, fmt.Errorf("AppendIntegerToArray inParam 1 not found")
+	}
+
+	outPort := em.GetOutPort(0)
+	if outPort == nil {
+		return -1, fmt.Errorf("AppendIntegerToArray outParam 0 not found")
+	}
+
+	intArray, ok := inPortArray.GetArray()
+	if !ok {
+		return -1, fmt.Errorf("AppendIntegerToArray inParam 0 error")
+	}
+
+	intVal, ok := inPortVal.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("AppendIntegerToArray inParam 1 error")
+	}
+
+	for i := range intArray {
+		outPort.AppendArrayValInt(intArray[i].IntVal)
+	}
+	outPort.AppendArrayValInt(intVal)
+	return -1, nil
+}
+
+// AppendStringToArray 数组追加字符串
+type AppendStringToArray struct {
+	BaseExecNode
+}
+
+func (em *AppendStringToArray) GetName() string {
+	return "AppendStringToArray"
+}
+
+func (em *AppendStringToArray) Exec() (int, error) {
+	inPortArray := em.GetInPort(0)
+	if inPortArray == nil {
+		return -1, fmt.Errorf("AppendStringToArray inParam 0 not found")
+	}
+
+	inPortVal := em.GetInPort(1)
+	if inPortVal == nil {
+		return -1, fmt.Errorf("AppendStringToArray inParam 1 not found")
+	}
+
+	outPort := em.GetOutPort(0)
+	if outPort == nil {
+		return -1, fmt.Errorf("AppendStringToArray outParam 0 not found")
+	}
+
+	intArray, ok := inPortArray.GetArray()
+	if !ok {
+		return -1, fmt.Errorf("AppendStringToArray inParam 0 error")
+	}
+
+	for i := range intArray {
+		outPort.AppendArrayValStr(intArray[i].StrVal)
+	}
+
+	return -1, nil
 }

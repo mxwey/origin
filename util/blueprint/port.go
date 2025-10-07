@@ -22,9 +22,16 @@ type Port[T iPortType] struct {
 }
 
 func (em *Port[T]) Clone() IPort {
-	return &Port[T]{
-		PortVal: em.PortVal,
+	arrayData, ok := any(em.PortVal).(Port_Array)
+	if !ok {
+		return &Port[T]{
+			PortVal: em.PortVal,
+		}
 	}
+
+	portArray := Port[Port_Array]{}
+	portArray.PortVal = append(portArray.PortVal, arrayData...)
+	return &portArray
 }
 
 func (em *Port[T]) Reset() {

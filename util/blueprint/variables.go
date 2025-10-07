@@ -60,7 +60,6 @@ func (g *SetVariablesNode) Exec() (int, error) {
 	}
 
 	varPort := port.Clone()
-	varPort.SetValue(port)
 	if strings.HasPrefix(g.varName, globalVariablesPrefix) {
 		g.gr.globalVariables[g.varName] = varPort
 	} else {

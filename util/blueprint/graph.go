@@ -42,7 +42,7 @@ type edgeConfig struct {
 }
 
 type MultiTypeValue struct {
-	Value interface{}
+	Value any
 }
 
 // 实现json.Unmarshaler接口，自定义解码逻辑
@@ -75,6 +75,11 @@ func (v *MultiTypeValue) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	var arrayVal []any
+	if err := json.Unmarshal(data, &arrayVal); err == nil {
+		v.Value = arrayVal
+		return nil
+	}
 	// 如果都失败，返回错误
 	return fmt.Errorf("cannot unmarshal JSON value: %s", string(data))
 }
