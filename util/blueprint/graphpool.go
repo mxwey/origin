@@ -9,13 +9,15 @@ import (
 )
 
 type GraphPool struct {
-	mapGraphs map[string]*baseGraph
-	execPool  *ExecPool
+	mapGraphs       map[string]*baseGraph
+	execPool        *ExecPool
+	blueprintModule IBlueprintModule
 }
 
-func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string) error {
+func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string, blueprintModule IBlueprintModule) error {
 	gp.execPool = execPool
 	gp.mapGraphs = make(map[string]*baseGraph, 1024)
+	gp.blueprintModule = blueprintModule
 
 	// 检查路径是否存在
 	stat, err := os.Stat(graphFilePath)
@@ -49,7 +51,7 @@ func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string) error {
 	})
 }
 
-func (gp *GraphPool) Create(graphName string) IGraph {
+func (gp *GraphPool) Create(graphName string, graphID int64) IGraph {
 	gr, ok := gp.mapGraphs[graphName]
 	if !ok {
 		return nil
@@ -57,8 +59,9 @@ func (gp *GraphPool) Create(graphName string) IGraph {
 
 	var graph Graph
 	graph.baseGraph = gr
+	graph.graphID = graphID
 	graph.context = make(map[string]*ExecContext, 4)
-
+	graph.IBlueprintModule = gp.blueprintModule
 	return &graph
 }
 
@@ -237,15 +240,14 @@ func (gp *GraphPool) prepareOneEntrance(graphName string, entranceID int64, node
 		return err
 	}
 
-	var gr baseGraph
-	gr.entrance = make(map[int64]*execNode, 16)
-	gr.entrance[entranceID] = nodeExec
-
-	if _, ok := gp.mapGraphs[graphName]; ok {
-		return fmt.Errorf("baseGraph %s already exists", graphName)
+	gr, ok := gp.mapGraphs[graphName]
+	if !ok {
+		gr = &baseGraph{}
+		gr.entrance = make(map[int64]*execNode, 16)
+		gp.mapGraphs[graphName] = gr
 	}
 
-	gp.mapGraphs[graphName] = &gr
+	gr.entrance[entranceID] = nodeExec
 
 	return nil
 }

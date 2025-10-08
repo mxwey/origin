@@ -189,6 +189,10 @@ func (em *innerExecNode) GetOutPortParamStartIndex() int {
 	return em.outPortParamStartIndex
 }
 
+func (en *BaseExecNode) GetBluePrintModule() IBlueprintModule {
+	return en.gr.IBlueprintModule
+}
+
 func (en *BaseExecNode) initInnerExecNode(innerNode *innerExecNode) {
 	en.innerExecNode = innerNode
 }
@@ -270,6 +274,14 @@ func (en *BaseExecNode) GetInPortStr(index int) (Port_Str, bool) {
 		return "", false
 	}
 	return port.GetStr()
+}
+
+func (en *BaseExecNode) GetInPortArray(index int) (Port_Array, bool) {
+	port := en.GetInPort(index)
+	if port == nil {
+		return nil, false
+	}
+	return port.GetArray()
 }
 
 func (en *BaseExecNode) GetInPortArrayValInt(index int, idx int) (Port_Int, bool) {

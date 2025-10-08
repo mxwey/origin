@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"github.com/duanhf2012/origin/v2/log"
 	"math/rand/v2"
+	"time"
 )
 
 // 系统入口ID定义，1000以内
 const (
-	EntranceID_ArrayParam = 2
 	EntranceID_IntParam   = 1
+	EntranceID_ArrayParam = 2
+	EntranceID_Timer      = 3
 )
 
 func init() {
 	RegExecNode(&Entrance_ArrayParam{})
 	RegExecNode(&Entrance_IntParam{})
+	RegExecNode(&Entrance_Timer{})
 	RegExecNode(&Output{})
 	RegExecNode(&Sequence{})
 	RegExecNode(&Foreach{})
@@ -32,6 +35,7 @@ func init() {
 	RegExecNode(&EqualInteger{})
 	RegExecNode(&RangeCompare{})
 	RegExecNode(&Probability{})
+	RegExecNode(&CreateTimer{})
 }
 
 type Entrance_ArrayParam struct {
@@ -58,6 +62,18 @@ func (em *Entrance_IntParam) Exec() (int, error) {
 	return 0, nil
 }
 
+type Entrance_Timer struct {
+	BaseExecNode
+}
+
+func (em *Entrance_Timer) GetName() string {
+	return "Entrance_Timer"
+}
+
+func (em *Entrance_Timer) Exec() (int, error) {
+	return 0, nil
+}
+
 type Output struct {
 	BaseExecNode
 }
@@ -69,10 +85,20 @@ func (em *Output) GetName() string {
 func (em *Output) Exec() (int, error) {
 	val, ok := em.GetInPortInt(1)
 	if !ok {
-		return 0, fmt.Errorf("Output Exec inParam not found")
+		return 0, fmt.Errorf("output Exec inParam not found")
 	}
 
-	fmt.Printf("Output Exec inParam %d\n", val)
+	valStr, ok := em.GetInPortStr(2)
+	if !ok {
+		return 0, fmt.Errorf("output Exec inParam not found")
+	}
+
+	valArray, ok := em.GetInPortArray(3)
+	if !ok {
+		return 0, fmt.Errorf("output Exec inParam not found")
+	}
+
+	fmt.Printf("output Exec inParam [%d] [%s] [%v]\n", val, valStr, valArray)
 	return 0, nil
 }
 
@@ -594,4 +620,66 @@ func (em *AppendStringToArray) Exec() (int, error) {
 	}
 
 	return -1, nil
+}
+
+// CreateTimer 创建定时器
+type CreateTimer struct {
+	BaseExecNode
+}
+
+func (em *CreateTimer) GetName() string {
+	return "CreateTimer"
+}
+
+func (em *CreateTimer) Exec() (int, error) {
+	delay, ok := em.GetInPortInt(0)
+	if !ok {
+		return -1, fmt.Errorf("CreateTimer inParam 0 error")
+	}
+
+	array, ok := em.GetInPortArray(1)
+	if !ok {
+		return -1, fmt.Errorf("CreateTimer inParam 0 error")
+	}
+
+	var timerId uint64
+	graphID := em.gr.graphID
+	em.gr.IBlueprintModule.SafeAfterFunc(&timerId, time.Duration(delay)*time.Millisecond, nil, func(timerId uint64, additionData interface{}) {
+		err := em.gr.IBlueprintModule.TriggerEvent(graphID, EntranceID_Timer, array)
+		if err != nil {
+			log.Warnf("CreateTimer SafeAfterFunc error timerId:%d err:%v", timerId, err)
+		}
+	})
+
+	outPort := em.GetOutPort(1)
+	if outPort == nil {
+		return -1, fmt.Errorf("CreateTimer outParam 1 not found")
+	}
+
+	outPort.SetInt(int64(timerId))
+	return 0, nil
+}
+
+// CloseTimer 关闭定时器
+type CloseTimer struct {
+	BaseExecNode
+}
+
+func (em *CloseTimer) GetName() string {
+	return "CloseTimer"
+}
+
+func (em *CloseTimer) Exec() (int, error) {
+	timerID, ok := em.GetInPortInt(1)
+	if !ok {
+		return -1, fmt.Errorf("CreateTimer inParam 0 error")
+	}
+
+	id := uint64(timerID)
+	ok = em.gr.IBlueprintModule.CancelTimerId(&id)
+	if !ok {
+		log.Warnf("CloseTimer CancelTimerId:%d", id)
+	}
+
+	return 0, nil
 }

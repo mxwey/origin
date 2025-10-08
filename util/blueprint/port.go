@@ -162,6 +162,15 @@ func (em *Port[T]) AppendArrayValStr(val Port_Str) bool {
 	return false
 }
 
+func (em *Port[T]) AppendArrayData(val ArrayData) bool {
+	if t, ok := any(&em.PortVal).(*Port_Array); ok {
+		*t = append(*t, val)
+		return true
+	}
+	
+	return false
+}
+
 func (em *Port[T]) GetArrayLen() Port_Int {
 	if t, ok := any(&em.PortVal).(*Port_Array); ok {
 		return Port_Int(len(*t))
@@ -320,6 +329,11 @@ func (em *Port[T]) setAnyVale(v any) error {
 		arr := v.([]string)
 		for _, val := range arr {
 			em.AppendArrayValStr(val)
+		}
+	case Port_Array:
+		arr := v.(Port_Array)
+		for _, val := range arr {
+			em.AppendArrayValInt(val.IntVal)
 		}
 	}
 

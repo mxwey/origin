@@ -3,6 +3,7 @@ package blueprint
 import (
 	"fmt"
 	"github.com/goccy/go-json"
+	"time"
 )
 
 type IGraph interface {
@@ -10,13 +11,21 @@ type IGraph interface {
 	Release()
 }
 
+type IBlueprintModule interface {
+	SafeAfterFunc(timerId *uint64, d time.Duration, AdditionData interface{}, cb func(uint64, interface{}))
+	CancelTimerId(timerId *uint64) bool
+	TriggerEvent(graphID int64, eventID int64, args ...any) error
+}
+
 type baseGraph struct {
 	entrance map[int64]*execNode // 入口
 }
 
 type Graph struct {
+	graphID int64
 	*baseGraph
 	graphContext
+	IBlueprintModule
 }
 
 type graphContext struct {
