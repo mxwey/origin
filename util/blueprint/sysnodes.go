@@ -649,7 +649,11 @@ func (em *CreateTimer) Exec() (int, error) {
 		if err != nil {
 			log.Warnf("CreateTimer SafeAfterFunc error timerId:%d err:%v", timerId, err)
 		}
+		
+		em.gr.IBlueprintModule.CancelTimerId(graphID,&timerId)
 	})
+
+	em.gr.mapTimerID[timerId] = struct{}{}
 
 	outPort := em.GetOutPort(1)
 	if outPort == nil {
@@ -676,7 +680,7 @@ func (em *CloseTimer) Exec() (int, error) {
 	}
 
 	id := uint64(timerID)
-	ok = em.gr.IBlueprintModule.CancelTimerId(&id)
+	ok = em.gr.IBlueprintModule.CancelTimerId(em.gr.graphID, &id)
 	if !ok {
 		log.Warnf("CloseTimer CancelTimerId:%d", id)
 	}

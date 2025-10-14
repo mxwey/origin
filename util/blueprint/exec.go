@@ -8,6 +8,7 @@ type IBaseExecNode interface {
 	GetPorts() ([]IPort, []IPort)
 	getExecNodeInfo() (*ExecContext, *execNode)
 	setExecNodeInfo(gr *ExecContext, en *execNode)
+	GetBlueprintModule() IBlueprintModule
 }
 
 type IInnerExecNode interface {
@@ -527,4 +528,13 @@ func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
 
 func (en *BaseExecNode) setVariableName(name string) bool {
 	return false
+}
+
+
+func (en *BaseExecNode) GetBlueprintModule() IBlueprintModule{
+	if en.gr == nil {
+		return nil
+	}
+
+	return en.gr.IBlueprintModule
 }

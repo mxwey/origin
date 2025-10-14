@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	"time"
+	"github.com/duanhf2012/origin/v2/service"
 )
 
+const ReturnVarial = "g_Return"
 type IGraph interface {
-	Do(entranceID int64, args ...any) error
+	Do(entranceID int64, args ...any) (Port_Array,error)
 	Release()
 }
 
 type IBlueprintModule interface {
 	SafeAfterFunc(timerId *uint64, d time.Duration, AdditionData interface{}, cb func(uint64, interface{}))
-	CancelTimerId(timerId *uint64) bool
 	TriggerEvent(graphID int64, eventID int64, args ...any) error
+	CancelTimerId(graphID int64,timerId *uint64) bool
+	GetGameService() service.IService
+	GetBattleService() service.IService
 }
 
 type baseGraph struct {
@@ -26,13 +30,15 @@ type Graph struct {
 	*baseGraph
 	graphContext
 	IBlueprintModule
+	mapTimerID map[uint64]struct{}
 }
 
 type graphContext struct {
 	context         map[string]*ExecContext // 上下文
 	variables       map[string]IPort        // 变量
-	globalVariables map[string]IPort        // 全局变量
+	globalVariables map[string]IPort        // 全局变量,g_Return,为执行返回值
 }
+
 type nodeConfig struct {
 	Id     string `json:"id"`
 	Class  string `json:"class"`
@@ -128,10 +134,10 @@ func (gc *graphConfig) GetNodeByID(nodeID string) *nodeConfig {
 	return nil
 }
 
-func (gr *Graph) Do(entranceID int64, args ...any) error {
+func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array,error) {
 	entranceNode := gr.entrance[entranceID]
 	if entranceNode == nil {
-		return fmt.Errorf("entranceID:%d not found", entranceID)
+		return nil,fmt.Errorf("entranceID:%d not found", entranceID)
 	}
 
 	gr.variables = map[string]IPort{}
@@ -139,7 +145,22 @@ func (gr *Graph) Do(entranceID int64, args ...any) error {
 		gr.globalVariables = map[string]IPort{}
 	}
 
-	return entranceNode.Do(gr, args...)
+	err := entranceNode.Do(gr, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	if gr.globalVariables!= nil {
+		port := gr.globalVariables[ReturnVarial]
+		if port != nil {
+			array,ok := port.GetArray()
+			if ok{
+				return array,nil
+			}
+		}
+	}
+
+	return nil,nil
 }
 
 func (gr *Graph) GetNodeInPortValue(nodeID string, inPortIndex int) IPort {
@@ -165,6 +186,10 @@ func (gr *Graph) GetNodeOutPortValue(nodeID string, outPortIndex int) IPort {
 
 func (gr *Graph) Release() {
 	// 有定时器关闭定时器
+	for timerID := range gr.mapTimerID {
+		gr.CancelTimerId(gr.graphID, &timerID)
+	}
+	gr.mapTimerID = nil
 
 	// 清理掉所有数据
 	*gr = Graph{}
