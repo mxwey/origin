@@ -112,3 +112,8 @@ func Now() time.Time {
 func SetTimeOffset(offset time.Duration) {
 	timeOffset = offset
 }
+
+// AddTimeOffset 添加时间偏移量
+func AddTimeOffset(addOffset time.Duration) {
+	timeOffset += addOffset
+}
