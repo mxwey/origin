@@ -2,9 +2,10 @@ package blueprint
 
 import (
 	"fmt"
-	"github.com/duanhf2012/origin/v2/log"
 	"math/rand/v2"
 	"time"
+
+	"github.com/duanhf2012/origin/v2/log"
 )
 
 // 系统入口ID定义，1000以内
@@ -21,6 +22,8 @@ func init() {
 	RegExecNode(&Output{})
 	RegExecNode(&Sequence{})
 	RegExecNode(&Foreach{})
+	RegExecNode(&ForeachIntArray{})
+
 	RegExecNode(&GetArrayInt{})
 	RegExecNode(&GetArrayString{})
 	RegExecNode(&GetArrayLen{})
@@ -120,6 +123,36 @@ func (em *Sequence) Exec() (int, error) {
 		if err != nil {
 			return -1, err
 		}
+	}
+
+	return -1, nil
+}
+
+type ForeachIntArray struct {
+	BaseExecNode
+}
+
+func (em *ForeachIntArray) GetName() string {
+	return "ForeachIntArray"
+}
+
+func (em *ForeachIntArray) Exec() (int, error) {
+	array, ok := em.GetInPortArray(1)
+	if !ok {
+		return 0, fmt.Errorf("ForeachIntArray Exec inParam 1 not found")
+	}
+
+	for i := range array {
+		em.ExecContext.OutputPorts[2].SetInt(array[i].IntVal)
+		err := em.DoNext(0)
+		if err != nil {
+			return -1, err
+		}
+	}
+
+	err := em.DoNext(1)
+	if err != nil {
+		return -1, err
 	}
 
 	return -1, nil
@@ -649,8 +682,8 @@ func (em *CreateTimer) Exec() (int, error) {
 		if err != nil {
 			log.Warnf("CreateTimer SafeAfterFunc error timerId:%d err:%v", timerId, err)
 		}
-		
-		em.gr.IBlueprintModule.CancelTimerId(graphID,&timerId)
+
+		em.gr.IBlueprintModule.CancelTimerId(graphID, &timerId)
 	})
 
 	em.gr.mapTimerID[timerId] = struct{}{}
