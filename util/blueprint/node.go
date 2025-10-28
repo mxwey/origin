@@ -5,8 +5,8 @@ import (
 )
 
 type prePortNode struct {
-	node         *execNode // 上个结点
-	outPortIndex int       // 对应上一个结点的OutPort索引
+	node      *execNode // 上个结点
+	outPortId int       // 对应上一个结点的OutPortId
 }
 
 type execNode struct {
@@ -142,9 +142,9 @@ func (en *execNode) doSetInPort(gr *Graph, index int, inPort IPort) error {
 
 	// 判断上一个结点是否已经执行过
 	if _, ok := gr.context[preNode.node.Id]; ok {
-		outPort := gr.GetNodeOutPortValue(preNode.node.Id, preNode.outPortIndex)
+		outPort := gr.GetNodeOutPortValue(preNode.node.Id, preNode.outPortId)
 		if outPort == nil {
-			return fmt.Errorf("pre node %s out port index %d not found", preNode.node.Id, preNode.outPortIndex)
+			return fmt.Errorf("pre node %s out port index %d not found", preNode.node.Id, preNode.outPortId)
 		}
 
 		inPort.SetValue(outPort)
@@ -175,12 +175,12 @@ func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {
 
 	// 处理InPort结点值
 	var err error
-	for index := range inPorts {
-		if en.execNode.IsInPortExec(index) {
+	for portId := range inPorts {
+		if en.execNode.IsInPortExec(portId) {
 			continue
 		}
 
-		err = en.doSetInPort(gr, index, inPorts[index])
+		err = en.doSetInPort(gr, portId, inPorts[portId])
 		if err != nil {
 			return err
 		}

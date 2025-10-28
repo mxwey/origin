@@ -22,6 +22,8 @@ type IInnerExecNode interface {
 
 	GetInPort(index int) IPort
 	GetOutPort(index int) IPort
+
+	GetOutPortParamStartIndex() int
 }
 
 type IExecNode interface {
@@ -40,8 +42,10 @@ type innerExecNode struct {
 	Package     string
 	Description string
 
-	inPort  []IPort
-	outPort []IPort
+	inPort  []IPort // 下标即为portId
+	outPort []IPort // 下标即为portId
+
+	outPortParamStartIndex int // 输出参数的起始索引,用于排除执行出口
 
 	IExecNode
 }
@@ -139,21 +143,27 @@ func (em *innerExecNode) SetOutPortById(id int, port IPort) bool {
 		return false
 	}
 	em.outPort[id] = port
+
+	// 分析执行的
+	em.outPortParamStartIndex = -1
+	for i := range em.outPort {
+		if em.outPort[i] == nil {
+			continue
+		}
+
+		// 遇到非Exec结点，即为输出参数开始位置
+		if !em.outPort[i].IsPortExec() {
+			em.outPortParamStartIndex = i
+			break
+		}
+	}
+
 	return true
 }
 
-//
-//func (em *innerExecNode) AppendOutPort(port ...IPort) {
-//	if len(em.outPort) == 0 {
-//		em.outPortParamStartIndex = -1
-//	}
-//	for i := 0; i < len(port); i++ {
-//		if !port[i].IsPortExec() && em.outPortParamStartIndex < 0 {
-//			em.outPortParamStartIndex = len(em.outPort)
-//		}
-//		em.outPort = append(em.outPort, port[i])
-//	}
-//}
+func (em *innerExecNode) GetOutPortParamStartIndex() int {
+	return em.outPortParamStartIndex
+}
 
 func (em *innerExecNode) GetName() string {
 	return em.Name
@@ -166,6 +176,10 @@ func (em *innerExecNode) SetExec(exec IExecNode) {
 func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	inPorts := make([]IPort, 0, 2)
 	for _, port := range em.inPort {
+		if port == nil {
+			inPorts = append(inPorts, nil)
+		}
+
 		if port.IsPortExec() {
 			// 执行入口, 不需要克隆,占位处理
 			inPorts = append(inPorts, nil)
@@ -177,6 +191,10 @@ func (em *innerExecNode) CloneInOutPort() ([]IPort, []IPort) {
 	outPorts := make([]IPort, 0, 2)
 
 	for _, port := range em.outPort {
+		if port == nil {
+			outPorts = append(outPorts, nil)
+		}
+
 		if port.IsPortExec() {
 			outPorts = append(outPorts, nil)
 			continue

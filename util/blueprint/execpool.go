@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sort"
 )
 
 // 格式说明Entrance_ID
@@ -83,6 +84,15 @@ func (em *ExecPool) processJSONFile(filePath string) error {
 	}
 
 	for i := range baseExecConfig {
+		// 排序
+		sort.Slice(baseExecConfig[i].Inputs, func(left, right int) bool {
+			return baseExecConfig[i].Inputs[left].PortId < baseExecConfig[i].Inputs[right].PortId
+		})
+
+		sort.Slice(baseExecConfig[i].Outputs, func(left, right int) bool {
+			return baseExecConfig[i].Outputs[left].PortId < baseExecConfig[i].Outputs[right].PortId
+		})
+
 		exec, err := em.createExecFromJSON(baseExecConfig[i])
 		if err != nil {
 			return err

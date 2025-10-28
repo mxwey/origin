@@ -263,7 +263,7 @@ func (gp *GraphPool) findPreInPortNode(mapNodes map[string]*execNode, nodeExec *
 
 			var preNode prePortNode
 			preNode.node = srcNode
-			preNode.outPortIndex = edge.SourcePortId
+			preNode.outPortId = edge.SourcePortId
 
 			return &preNode
 		}
