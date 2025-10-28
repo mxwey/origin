@@ -22,9 +22,6 @@ type IInnerExecNode interface {
 
 	GetInPort(index int) IPort
 	GetOutPort(index int) IPort
-
-	GetInPortParamStartIndex() int
-	GetOutPortParamStartIndex() int
 }
 
 type IExecNode interface {
@@ -46,9 +43,6 @@ type innerExecNode struct {
 	inPort  []IPort
 	outPort []IPort
 
-	inPortParamStartIndex  int // 输入参数的起始索引,用于排除执行入口
-	outPortParamStartIndex int // 输出参数的起始索引,用于排除执行出口
-
 	IExecNode
 }
 
@@ -67,50 +61,99 @@ type InputConfig struct {
 	DataType  string `json:"data_type"`
 	HasInput  bool   `json:"has_input"`
 	PinWidget string `json:"pin_widget"`
+	PortId    int    `json:"port_id"`
 }
 
-type OutInputConfig struct {
+type OutputConfig struct {
 	Name     string `json:"name"`
 	PortType string `json:"type"`
 	DataType string `json:"data_type"`
 	HasInput bool   `json:"has_input"`
+	PortId   int    `json:"port_id"`
 }
 
 type BaseExecConfig struct {
-	Name        string           `json:"name"`
-	Title       string           `json:"title"`
-	Package     string           `json:"package"`
-	Description string           `json:"description"`
-	IsPure      bool             `json:"is_pure"`
-	Inputs      []InputConfig    `json:"inputs"`
-	Outputs     []OutInputConfig `json:"outputs"`
+	Name        string         `json:"name"`
+	Title       string         `json:"title"`
+	Package     string         `json:"package"`
+	Description string         `json:"description"`
+	IsPure      bool           `json:"is_pure"`
+	Inputs      []InputConfig  `json:"inputs"`
+	Outputs     []OutputConfig `json:"outputs"`
 }
 
-func (em *innerExecNode) AppendInPort(port ...IPort) {
-	if len(em.inPort) == 0 {
-		em.inPortParamStartIndex = -1
-	}
-
-	for i := 0; i < len(port); i++ {
-		if !port[i].IsPortExec() && em.inPortParamStartIndex < 0 {
-			em.inPortParamStartIndex = len(em.inPort)
+func (bc *BaseExecConfig) GetMaxInPortId() int {
+	maxPortId := -1
+	for i := range bc.Inputs {
+		if bc.Inputs[i].PortId > maxPortId {
+			maxPortId = bc.Inputs[i].PortId
 		}
-
-		em.inPort = append(em.inPort, port[i])
 	}
+
+	return maxPortId
 }
 
-func (em *innerExecNode) AppendOutPort(port ...IPort) {
-	if len(em.outPort) == 0 {
-		em.outPortParamStartIndex = -1
-	}
-	for i := 0; i < len(port); i++ {
-		if !port[i].IsPortExec() && em.outPortParamStartIndex < 0 {
-			em.outPortParamStartIndex = len(em.outPort)
+func (bc *BaseExecConfig) GetMaxOutPortId() int {
+	maxPortId := -1
+	for i := range bc.Outputs {
+		if bc.Outputs[i].PortId > maxPortId {
+			maxPortId = bc.Outputs[i].PortId
 		}
-		em.outPort = append(em.outPort, port[i])
 	}
+
+	return maxPortId
 }
+
+//func (em *innerExecNode) AppendInPort(port ...IPort) {
+//	if len(em.inPort) == 0 {
+//		em.inPortParamStartIndex = -1
+//	}
+//
+//	for i := 0; i < len(port); i++ {
+//		if !port[i].IsPortExec() && em.inPortParamStartIndex < 0 {
+//			em.inPortParamStartIndex = len(em.inPort)
+//		}
+//
+//		em.inPort = append(em.inPort, port[i])
+//	}
+//}
+
+func (em *innerExecNode) PrepareMaxInPortId(maxInPortId int) {
+	em.inPort = make([]IPort, 0, maxInPortId+1)
+}
+
+func (em *innerExecNode) PrepareMaxOutPortId(maxOutPortId int) {
+	em.outPort = make([]IPort, 0, maxOutPortId+1)
+}
+
+func (em *innerExecNode) SetInPortById(id int, port IPort) bool {
+	if id < 0 || id >= len(em.inPort) {
+		return false
+	}
+	em.inPort[id] = port
+	return true
+}
+
+func (em *innerExecNode) SetOutPortById(id int, port IPort) bool {
+	if id < 0 || id >= len(em.outPort) {
+		return false
+	}
+	em.outPort[id] = port
+	return true
+}
+
+//
+//func (em *innerExecNode) AppendOutPort(port ...IPort) {
+//	if len(em.outPort) == 0 {
+//		em.outPortParamStartIndex = -1
+//	}
+//	for i := 0; i < len(port); i++ {
+//		if !port[i].IsPortExec() && em.outPortParamStartIndex < 0 {
+//			em.outPortParamStartIndex = len(em.outPort)
+//		}
+//		em.outPort = append(em.outPort, port[i])
+//	}
+//}
 
 func (em *innerExecNode) GetName() string {
 	return em.Name
@@ -180,14 +223,6 @@ func (em *innerExecNode) GetOutPort(index int) IPort {
 		return nil
 	}
 	return em.outPort[index]
-}
-
-func (em *innerExecNode) GetInPortParamStartIndex() int {
-	return em.inPortParamStartIndex
-}
-
-func (em *innerExecNode) GetOutPortParamStartIndex() int {
-	return em.outPortParamStartIndex
 }
 
 func (en *BaseExecNode) GetBluePrintModule() IBlueprintModule {
@@ -530,8 +565,7 @@ func (en *BaseExecNode) setVariableName(name string) bool {
 	return false
 }
 
-
-func (en *BaseExecNode) GetBlueprintModule() IBlueprintModule{
+func (en *BaseExecNode) GetBlueprintModule() IBlueprintModule {
 	if en.gr == nil {
 		return nil
 	}

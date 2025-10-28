@@ -2,21 +2,23 @@ package blueprint
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"time"
+
 	"github.com/duanhf2012/origin/v2/service"
+	"github.com/goccy/go-json"
 )
 
 const ReturnVarial = "g_Return"
+
 type IGraph interface {
-	Do(entranceID int64, args ...any) (Port_Array,error)
+	Do(entranceID int64, args ...any) (Port_Array, error)
 	Release()
 }
 
 type IBlueprintModule interface {
 	SafeAfterFunc(timerId *uint64, d time.Duration, AdditionData interface{}, cb func(uint64, interface{}))
 	TriggerEvent(graphID int64, eventID int64, args ...any) error
-	CancelTimerId(graphID int64,timerId *uint64) bool
+	CancelTimerId(graphID int64, timerId *uint64) bool
 	GetGameService() service.IService
 	GetBattleService() service.IService
 }
@@ -52,8 +54,8 @@ type edgeConfig struct {
 	SourceNodeID string `json:"source_node_id"`
 	DesNodeId    string `json:"des_node_id"`
 
-	SourcePortIndex int `json:"source_port_index"`
-	DesPortIndex    int `json:"des_port_index"`
+	SourcePortId int `json:"source_port_id"`
+	DesPortId    int `json:"des_port_id"`
 }
 
 type MultiTypeValue struct {
@@ -134,10 +136,10 @@ func (gc *graphConfig) GetNodeByID(nodeID string) *nodeConfig {
 	return nil
 }
 
-func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array,error) {
+func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array, error) {
 	entranceNode := gr.entrance[entranceID]
 	if entranceNode == nil {
-		return nil,fmt.Errorf("entranceID:%d not found", entranceID)
+		return nil, fmt.Errorf("entranceID:%d not found", entranceID)
 	}
 
 	gr.variables = map[string]IPort{}
@@ -150,17 +152,17 @@ func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array,error) {
 		return nil, err
 	}
 
-	if gr.globalVariables!= nil {
+	if gr.globalVariables != nil {
 		port := gr.globalVariables[ReturnVarial]
 		if port != nil {
-			array,ok := port.GetArray()
-			if ok{
-				return array,nil
+			array, ok := port.GetArray()
+			if ok {
+				return array, nil
 			}
 		}
 	}
 
-	return nil,nil
+	return nil, nil
 }
 
 func (gr *Graph) GetNodeInPortValue(nodeID string, inPortIndex int) IPort {

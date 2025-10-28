@@ -2,10 +2,11 @@ package blueprint
 
 import (
 	"fmt"
-	"github.com/goccy/go-json"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 type GraphPool struct {
@@ -206,7 +207,7 @@ func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *
 func (gp *GraphPool) findOutNextNode(graphConfig *graphConfig, mapNodeExec map[string]*execNode, sourceNodeID string, sourcePortIdx int) *execNode {
 	// 找到出口的NodeID
 	for _, edge := range graphConfig.Edges {
-		if edge.SourceNodeID == sourceNodeID && edge.SourcePortIndex == sourcePortIdx {
+		if edge.SourceNodeID == sourceNodeID && edge.SourcePortId == sourcePortIdx {
 			return mapNodeExec[edge.DesNodeId]
 		}
 	}
@@ -254,7 +255,7 @@ func (gp *GraphPool) prepareOneEntrance(graphName string, entranceID int64, node
 
 func (gp *GraphPool) findPreInPortNode(mapNodes map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig, portIdx int) *prePortNode {
 	for _, edge := range graphConfig.Edges {
-		if edge.DesNodeId == nodeExec.Id && edge.DesPortIndex == portIdx {
+		if edge.DesNodeId == nodeExec.Id && edge.DesPortId == portIdx {
 			srcNode := mapNodes[edge.SourceNodeID]
 			if srcNode == nil {
 				return nil
@@ -262,7 +263,7 @@ func (gp *GraphPool) findPreInPortNode(mapNodes map[string]*execNode, nodeExec *
 
 			var preNode prePortNode
 			preNode.node = srcNode
-			preNode.outPortIndex = edge.SourcePortIndex
+			preNode.outPortIndex = edge.SourcePortId
 
 			return &preNode
 		}

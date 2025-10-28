@@ -125,6 +125,8 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 	baseExec.Title = baseExecConfig.Title
 	baseExec.Package = baseExecConfig.Package
 	baseExec.Description = baseExecConfig.Description
+	baseExec.PrepareMaxInPortId(baseExecConfig.GetMaxInPortId())
+	baseExec.PrepareMaxOutPortId(baseExecConfig.GetMaxOutPortId())
 
 	// exec数量
 	inExecNum := 0
@@ -143,7 +145,8 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 			}
 
 			inExecNum++
-			baseExec.AppendInPort(NewPortExec())
+			baseExec.SetInPortById(input.PortId, NewPortExec())
+			// baseExec.AppendInPort(NewPortExec())
 			continue
 		}
 
@@ -152,7 +155,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 			return nil, err
 		}
 
-		baseExec.AppendInPort(port)
+		baseExec.SetInPortById(input.PortId, port)
 	}
 
 	hasData := false
@@ -168,16 +171,17 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 		}
 
 		if portType == Config_PortType_Exec {
-			baseExec.AppendOutPort(NewPortExec())
+			baseExec.SetOutPortById(output.PortId, NewPortExec())
 			continue
 		}
+
 		hasData = true
 		port, err := em.createPortByDataType(baseExec.Name, output.Name, output.DataType)
 		if err != nil {
 			return nil, err
 		}
 
-		baseExec.AppendOutPort(port)
+		baseExec.SetOutPortById(output.PortId, port)
 	}
 	return &baseExec, nil
 }
@@ -201,7 +205,7 @@ func (em *ExecPool) Register(exec IExecNode) bool {
 		return false
 	}
 
-	if _, ok := em.execNodeMap[innerNode.GetName()]; ok {
+	if _, ok = em.execNodeMap[innerNode.GetName()]; ok {
 		return false
 	}
 
@@ -275,12 +279,13 @@ func (em *ExecPool) loadSysExec() error {
 func (em *ExecPool) regGetVariables(typ string) error {
 	var baseExec innerExecNode
 	baseExec.Name = genGetVariablesNodeName(typ)
+	baseExec.PrepareMaxOutPortId(0)
 
 	outPort := NewPortByType(typ)
 	if outPort == nil {
 		return fmt.Errorf("invalid type %s", typ)
 	}
-	baseExec.AppendOutPort(outPort)
+	baseExec.SetOutPortById(0, outPort)
 
 	var getVariablesNode GetVariablesNode
 	getVariablesNode.nodeName = baseExec.GetName()
@@ -311,9 +316,14 @@ func (em *ExecPool) regSetVariables(typ string) error {
 	inPort := NewPortByType(typ)
 	outExecPort := NewPortByType(Config_PortType_Exec)
 	outPort := NewPortByType(typ)
+	baseExec.PrepareMaxInPortId(1)
+	baseExec.PrepareMaxOutPortId(1)
 
-	baseExec.AppendInPort(inExecPort, inPort)
-	baseExec.AppendOutPort(outExecPort, outPort)
+	baseExec.SetInPortById(0, inExecPort)
+	baseExec.SetInPortById(1, inPort)
+
+	baseExec.SetOutPortById(0, outExecPort)
+	baseExec.SetOutPortById(1, outPort)
 
 	baseExec.IExecNode = &SetVariablesNode{nodeName: baseExec.GetName()}
 	if !em.loadBaseExec(&baseExec) {
