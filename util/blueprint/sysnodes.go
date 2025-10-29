@@ -15,31 +15,7 @@ const (
 	EntranceID_Timer      = 3
 )
 
-func init() {
-	RegExecNode(&Entrance_ArrayParam{})
-	RegExecNode(&Entrance_IntParam{})
-	RegExecNode(&Entrance_Timer{})
-	RegExecNode(&Output{})
-	RegExecNode(&Sequence{})
-	RegExecNode(&Foreach{})
-	RegExecNode(&ForeachIntArray{})
 
-	RegExecNode(&GetArrayInt{})
-	RegExecNode(&GetArrayString{})
-	RegExecNode(&GetArrayLen{})
-	RegExecNode(&CreateIntArray{})
-	RegExecNode(&CreateStringArray{})
-	RegExecNode(&AppendIntegerToArray{})
-	RegExecNode(&AppendStringToArray{})
-
-	RegExecNode(&BoolIf{})
-	RegExecNode(&GreaterThanInteger{})
-	RegExecNode(&LessThanInteger{})
-	RegExecNode(&EqualInteger{})
-	RegExecNode(&RangeCompare{})
-	RegExecNode(&Probability{})
-	RegExecNode(&CreateTimer{})
-}
 
 type Entrance_ArrayParam struct {
 	BaseExecNode

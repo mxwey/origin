@@ -6,6 +6,8 @@ import (
 )
 
 type Blueprint struct {
+	execNodes []IExecNode // 注册的定义执行结点
+
 	execPool  ExecPool
 	graphPool GraphPool
 
@@ -15,13 +17,51 @@ type Blueprint struct {
 	cancelTimer func(*uint64)bool
 }
 
+func (bm *Blueprint) RegExecNode(execNode IExecNode) {
+	bm.execNodes = append(bm.execNodes, execNode)
+}
+
+func (bm *Blueprint) regSysNode(){
+	bm.RegExecNode(&AddInt{})
+	bm.RegExecNode(&SubInt{})
+	bm.RegExecNode(&MulInt{})
+	bm.RegExecNode(&DivInt{})
+	bm.RegExecNode(&ModInt{})
+	bm.RegExecNode(&RandNumber{})
+
+	bm.RegExecNode(&Entrance_ArrayParam{})
+	bm.RegExecNode(&Entrance_IntParam{})
+	bm.RegExecNode(&Entrance_Timer{})
+	bm.RegExecNode(&Output{})
+	bm.RegExecNode(&Sequence{})
+	bm.RegExecNode(&Foreach{})
+	bm.RegExecNode(&ForeachIntArray{})
+
+	bm.RegExecNode(&GetArrayInt{})
+	bm.RegExecNode(&GetArrayString{})
+	bm.RegExecNode(&GetArrayLen{})
+	bm.RegExecNode(&CreateIntArray{})
+	bm.RegExecNode(&CreateStringArray{})
+	bm.RegExecNode(&AppendIntegerToArray{})
+	bm.RegExecNode(&AppendStringToArray{})
+
+	bm.RegExecNode(&BoolIf{})
+	bm.RegExecNode(&GreaterThanInteger{})
+	bm.RegExecNode(&LessThanInteger{})
+	bm.RegExecNode(&EqualInteger{})
+	bm.RegExecNode(&RangeCompare{})
+	bm.RegExecNode(&Probability{})
+	bm.RegExecNode(&CreateTimer{})
+}
+
 func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprintModule IBlueprintModule,cancelTimer func(*uint64)bool) error {
+	bm.regSysNode()
 	err := bm.execPool.Load(execDefFilePath)
 	if err != nil {
 		return err
 	}
 
-	for _, e := range execNodes {
+	for _, e := range bm.execNodes {
 		if !bm.execPool.Register(e) {
 			return fmt.Errorf("register exec failed,exec:%s", e.GetName())
 		}
