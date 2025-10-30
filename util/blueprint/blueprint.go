@@ -82,9 +82,14 @@ func (bm *Blueprint) Create(graphName string) int64 {
 	if graphName == "" {
 		return 0
 	}
-	
+
 	graphID := atomic.AddInt64(&bm.seedID, 1)
-	bm.mapGraph[graphID] = bm.graphPool.Create(graphName, graphID)
+	gr := bm.graphPool.Create(graphName, graphID)
+	if gr == nil {
+		return 0
+	}
+
+	bm.mapGraph[graphID] = gr
 	return graphID
 }
 

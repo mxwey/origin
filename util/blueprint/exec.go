@@ -32,8 +32,6 @@ type IExecNode interface {
 	Exec() (int, error) // 返回后续执行的Node的Index
 	GetNextExecLen() int
 	getInnerExecNode() IInnerExecNode
-
-	setVariableName(name string) bool
 }
 
 type innerExecNode struct {
@@ -51,7 +49,7 @@ type innerExecNode struct {
 }
 
 type BaseExecNode struct {
-	*innerExecNode
+	*innerExecNode // 内部注册的执行结点
 
 	// 执行时初始化的数据
 	*ExecContext
@@ -108,26 +106,13 @@ func (bc *BaseExecConfig) GetMaxOutPortId() int {
 	return maxPortId
 }
 
-//func (em *innerExecNode) AppendInPort(port ...IPort) {
-//	if len(em.inPort) == 0 {
-//		em.inPortParamStartIndex = -1
-//	}
-//
-//	for i := 0; i < len(port); i++ {
-//		if !port[i].IsPortExec() && em.inPortParamStartIndex < 0 {
-//			em.inPortParamStartIndex = len(em.inPort)
-//		}
-//
-//		em.inPort = append(em.inPort, port[i])
-//	}
-//}
 
 func (em *innerExecNode) PrepareMaxInPortId(maxInPortId int) {
-	em.inPort = make([]IPort, 0, maxInPortId+1)
+	em.inPort = make([]IPort, maxInPortId+1)
 }
 
 func (em *innerExecNode) PrepareMaxOutPortId(maxOutPortId int) {
-	em.outPort = make([]IPort, 0, maxOutPortId+1)
+	em.outPort = make([]IPort, maxOutPortId+1)
 }
 
 func (em *innerExecNode) SetInPortById(id int, port IPort) bool {
@@ -241,6 +226,10 @@ func (em *innerExecNode) GetOutPort(index int) IPort {
 		return nil
 	}
 	return em.outPort[index]
+}
+
+func (en *BaseExecNode) GetVariableName() string {
+	return en.execNode.variableName
 }
 
 func (en *BaseExecNode) GetBluePrintModule() IBlueprintModule {
@@ -579,9 +568,6 @@ func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
 	return en.innerExecNode.IExecNode.(IInnerExecNode)
 }
 
-func (en *BaseExecNode) setVariableName(name string) bool {
-	return false
-}
 
 func (en *BaseExecNode) GetBlueprintModule() IBlueprintModule {
 	if en.gr == nil {

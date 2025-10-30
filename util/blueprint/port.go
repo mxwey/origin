@@ -213,7 +213,7 @@ func (em *Port[T]) convertInt64(v any) (int64, bool) {
 
 func (em *Port[T]) setAnyVale(v any) error {
 	switch v.(type) {
-	case int, int64:
+	case int8,int16,int32,int, int64,uint8,uint16,uint32,uint, uint64:
 		val, ok := em.convertInt64(v)
 		if !ok {
 			return fmt.Errorf("port type is %T, but value is %v", em.PortVal, v)

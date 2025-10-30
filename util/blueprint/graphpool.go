@@ -61,6 +61,7 @@ func (gp *GraphPool) Create(graphName string, graphID int64) IGraph {
 	var graph Graph
 	graph.baseGraph = gr
 	graph.graphID = graphID
+	graph.graphFileName = graphName
 	graph.context = make(map[string]*ExecContext, 4)
 	graph.IBlueprintModule = gp.blueprintModule
 	return &graph
@@ -137,8 +138,6 @@ func (gp *GraphPool) genVarExec(nodeCfg *nodeConfig, graphConfig *graphConfig) (
 	}
 
 	e := gp.execPool.GetExec(nodeName)
-	e.(IExecNode).setVariableName(varName)
-
 	return e, varName
 }
 
