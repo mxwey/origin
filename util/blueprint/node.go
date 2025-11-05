@@ -155,7 +155,7 @@ func (en *execNode) Do(gr *Graph, outPortArgs ...any) error {
 
 	startOutIdx := en.execNode.GetOutPortParamStartIndex()
 	for i := 0; i < len(outPortArgs); i++ {
-		if i >= len(outPorts) {
+		if i+startOutIdx >= len(outPorts) {
 			return fmt.Errorf("args %d not found in node %s", i, en.execNode.GetName())
 		}
 

@@ -32,7 +32,7 @@ func (bm *Blueprint) regSysNode(){
 	bm.RegExecNode(&Entrance_ArrayParam{})
 	bm.RegExecNode(&Entrance_IntParam{})
 	bm.RegExecNode(&Entrance_Timer{})
-	bm.RegExecNode(&Output{})
+	bm.RegExecNode(&DebugOutput{})
 	bm.RegExecNode(&Sequence{})
 	bm.RegExecNode(&Foreach{})
 	bm.RegExecNode(&ForeachIntArray{})

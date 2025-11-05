@@ -53,15 +53,15 @@ func (em *Entrance_Timer) Exec() (int, error) {
 	return 0, nil
 }
 
-type Output struct {
+type DebugOutput struct {
 	BaseExecNode
 }
 
-func (em *Output) GetName() string {
-	return "Output"
+func (em *DebugOutput) GetName() string {
+	return "DebugOutput"
 }
 
-func (em *Output) Exec() (int, error) {
+func (em *DebugOutput) Exec() (int, error) {
 	val, ok := em.GetInPortInt(1)
 	if !ok {
 		return 0, fmt.Errorf("output Exec inParam not found")
@@ -77,7 +77,7 @@ func (em *Output) Exec() (int, error) {
 		return 0, fmt.Errorf("output Exec inParam not found")
 	}
 
-	fmt.Printf("output Exec inParam [%d] [%s] [%v]\n", val, valStr, valArray)
+	log.Debug("DebugOutput Exec",log.Any("param1",val),log.Any("param2",valStr),log.Any("param3",valArray))
 	return 0, nil
 }
 
