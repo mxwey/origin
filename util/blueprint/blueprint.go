@@ -12,16 +12,16 @@ type Blueprint struct {
 	graphPool GraphPool
 
 	blueprintModule IBlueprintModule
-	mapGraph       map[int64]IGraph
-	seedID int64
-	cancelTimer func(*uint64)bool
+	mapGraph        map[int64]IGraph
+	seedID          int64
+	cancelTimer     func(*uint64) bool
 }
 
 func (bm *Blueprint) RegExecNode(execNode IExecNode) {
 	bm.execNodes = append(bm.execNodes, execNode)
 }
 
-func (bm *Blueprint) regSysNode(){
+func (bm *Blueprint) regSysNode() {
 	bm.RegExecNode(&AddInt{})
 	bm.RegExecNode(&SubInt{})
 	bm.RegExecNode(&MulInt{})
@@ -50,11 +50,12 @@ func (bm *Blueprint) regSysNode(){
 	bm.RegExecNode(&LessThanInteger{})
 	bm.RegExecNode(&EqualInteger{})
 	bm.RegExecNode(&RangeCompare{})
+	bm.RegExecNode(&EqualSwitch{})
 	bm.RegExecNode(&Probability{})
 	bm.RegExecNode(&CreateTimer{})
 }
 
-func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprintModule IBlueprintModule,cancelTimer func(*uint64)bool) error {
+func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprintModule IBlueprintModule, cancelTimer func(*uint64) bool) error {
 	bm.regSysNode()
 	err := bm.execPool.Load(execDefFilePath)
 	if err != nil {
@@ -74,7 +75,7 @@ func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprin
 
 	bm.cancelTimer = cancelTimer
 	bm.blueprintModule = blueprintModule
-	bm.mapGraph = make(map[int64]IGraph,128)
+	bm.mapGraph = make(map[int64]IGraph, 128)
 	return nil
 }
 
@@ -93,26 +94,30 @@ func (bm *Blueprint) Create(graphName string) int64 {
 	return graphID
 }
 
-func (bm *Blueprint) TriggerEvent(graphID int64, eventID int64, args ...any) error{
+func (bm *Blueprint) TriggerEvent(graphID int64, eventID int64, args ...any) error {
 	graph := bm.mapGraph[graphID]
 	if graph == nil {
 		return fmt.Errorf("can not find graph:%d", graphID)
 	}
 
-	_,err:= graph.Do(eventID, args...)
+	_, err := graph.Do(eventID, args...)
 	return err
 }
 
-func (bm *Blueprint) Do(graphID int64, entranceID int64, args ...any) (Port_Array,error){
+func (bm *Blueprint) Do(graphID int64, entranceID int64, args ...any) (Port_Array, error) {
 	graph := bm.mapGraph[graphID]
 	if graph == nil {
-		return nil,fmt.Errorf("can not find graph:%d", graphID)
+		return nil, fmt.Errorf("can not find graph:%d", graphID)
 	}
 
 	return graph.Do(entranceID, args...)
 }
 
 func (bm *Blueprint) ReleaseGraph(graphID int64) {
+	if graphID == 0 {
+		return
+	}
+	
 	defer delete(bm.mapGraph, graphID)
 	graph := bm.mapGraph[graphID]
 	if graph == nil {
@@ -122,7 +127,7 @@ func (bm *Blueprint) ReleaseGraph(graphID int64) {
 	graph.Release()
 }
 
-func (bm *Blueprint) CancelTimerId(graphID int64, timerId *uint64) bool{
+func (bm *Blueprint) CancelTimerId(graphID int64, timerId *uint64) bool {
 	tId := *timerId
 	bm.cancelTimer(timerId)
 
@@ -131,7 +136,7 @@ func (bm *Blueprint) CancelTimerId(graphID int64, timerId *uint64) bool{
 		return false
 	}
 
-	gr,ok := graph.(*Graph)
+	gr, ok := graph.(*Graph)
 	if !ok {
 		return false
 	}

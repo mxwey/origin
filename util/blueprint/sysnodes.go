@@ -15,8 +15,6 @@ const (
 	EntranceID_Timer      = 3
 )
 
-
-
 type Entrance_ArrayParam struct {
 	BaseExecNode
 }
@@ -77,7 +75,7 @@ func (em *DebugOutput) Exec() (int, error) {
 		return 0, fmt.Errorf("output Exec inParam not found")
 	}
 
-	log.Debug("DebugOutput Exec",log.Any("param1",val),log.Any("param2",valStr),log.Any("param3",valArray))
+	log.Debug("DebugOutput Exec", log.Any("param1", val), log.Any("param2", valStr), log.Any("param3", valArray))
 	return 0, nil
 }
 
@@ -464,6 +462,40 @@ func (em *RangeCompare) Exec() (int, error) {
 
 	for i := 0; i < len(intArray) && i < em.GetOutPortCount()-2; i++ {
 		if ret <= intArray[i] {
+			return i + 2, nil
+		}
+	}
+
+	return 0, nil
+}
+
+// EqualSwitch 等于分支==
+type EqualSwitch struct {
+	BaseExecNode
+}
+
+func (em *EqualSwitch) GetName() string {
+	return "EqualSwitch"
+}
+
+func (em *EqualSwitch) Exec() (int, error) {
+	inPortA := em.GetInPort(1)
+	if inPortA == nil {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 not found")
+	}
+
+	ret, ok := inPortA.GetInt()
+	if !ok {
+		return -1, fmt.Errorf("GreaterThanInteger inParam 1 error")
+	}
+
+	intArray := em.execNode.GetInPortDefaultIntArrayValue(2)
+	if intArray == nil {
+		return 0, nil
+	}
+
+	for i := 0; i < len(intArray) && i < em.GetOutPortCount()-2; i++ {
+		if ret == intArray[i] {
 			return i + 2, nil
 		}
 	}
