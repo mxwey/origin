@@ -117,7 +117,8 @@ func (em *ForeachIntArray) Exec() (int, error) {
 	}
 
 	for i := range array {
-		em.ExecContext.OutputPorts[2].SetInt(array[i].IntVal)
+		em.ExecContext.OutputPorts[2].SetInt(Port_Int(i))
+		em.ExecContext.OutputPorts[3].SetInt(array[i].IntVal)
 		err := em.DoNext(0)
 		if err != nil {
 			return -1, err
