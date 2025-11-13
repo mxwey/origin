@@ -149,6 +149,8 @@ func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array, error) {
 	}
 
 	gr.variables = map[string]IPort{}
+	gr.context = map[string]*ExecContext{}
+
 	if gr.globalVariables == nil {
 		gr.globalVariables = map[string]IPort{}
 	}
