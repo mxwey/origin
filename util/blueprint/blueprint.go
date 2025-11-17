@@ -3,84 +3,153 @@ package blueprint
 import (
 	"fmt"
 	"sync/atomic"
+	"github.com/duanhf2012/origin/v2/log"
 )
 
 type Blueprint struct {
 	execNodes []IExecNode // 注册的定义执行结点
-
-	execPool  ExecPool
-	graphPool GraphPool
+	execNodeList []func() IExecNode
+	execPool  *ExecPool
+	graphPool *GraphPool
 
 	blueprintModule IBlueprintModule
 	mapGraph        map[int64]IGraph
 	seedID          int64
 	cancelTimer     func(*uint64) bool
+
+	execDefFilePath string // 执行结点定义文件路径
+	graphFilePath string   // 蓝图文件路径
 }
 
-func (bm *Blueprint) RegExecNode(execNode IExecNode) {
-	bm.execNodes = append(bm.execNodes, execNode)
+func (bm *Blueprint) RegisterExecNode(execNodeFunc func() IExecNode) {
+	bm.execNodeList = append(bm.execNodeList, execNodeFunc)
 }
 
-func (bm *Blueprint) regSysNode() {
-	bm.RegExecNode(&AddInt{})
-	bm.RegExecNode(&SubInt{})
-	bm.RegExecNode(&MulInt{})
-	bm.RegExecNode(&DivInt{})
-	bm.RegExecNode(&ModInt{})
-	bm.RegExecNode(&RandNumber{})
+type IExecNodeType[T any] interface {
+	*T
+	IExecNode
+}
 
-	bm.RegExecNode(&Entrance_ArrayParam{})
-	bm.RegExecNode(&Entrance_IntParam{})
-	bm.RegExecNode(&Entrance_Timer{})
-	bm.RegExecNode(&DebugOutput{})
-	bm.RegExecNode(&Sequence{})
-	bm.RegExecNode(&Foreach{})
-	bm.RegExecNode(&ForeachIntArray{})
+// 生成一个泛型函数，返回func() IExecNode类型
+func  NewExecNode[T any, P IExecNodeType[T]]() func() IExecNode {
+	return func() IExecNode {
+		var t T
+		return P(&t)
+	}
+}
 
-	bm.RegExecNode(&GetArrayInt{})
-	bm.RegExecNode(&GetArrayString{})
-	bm.RegExecNode(&GetArrayLen{})
-	bm.RegExecNode(&CreateIntArray{})
-	bm.RegExecNode(&CreateStringArray{})
-	bm.RegExecNode(&AppendIntegerToArray{})
-	bm.RegExecNode(&AppendStringToArray{})
+func (bm *Blueprint) regSysNodes() {
+	bm.RegisterExecNode(NewExecNode[AddInt]())
+	bm.RegisterExecNode(NewExecNode[SubInt]())
+	bm.RegisterExecNode(NewExecNode[MulInt]())
+	bm.RegisterExecNode(NewExecNode[DivInt]())
+	bm.RegisterExecNode(NewExecNode[ModInt]())
+	bm.RegisterExecNode(NewExecNode[RandNumber]())
 
-	bm.RegExecNode(&BoolIf{})
-	bm.RegExecNode(&GreaterThanInteger{})
-	bm.RegExecNode(&LessThanInteger{})
-	bm.RegExecNode(&EqualInteger{})
-	bm.RegExecNode(&RangeCompare{})
-	bm.RegExecNode(&EqualSwitch{})
-	bm.RegExecNode(&Probability{})
-	bm.RegExecNode(&CreateTimer{})
+	bm.RegisterExecNode(NewExecNode[Entrance_ArrayParam]())
+	bm.RegisterExecNode(NewExecNode[Entrance_IntParam]())
+	bm.RegisterExecNode(NewExecNode[Entrance_Timer]())
+	bm.RegisterExecNode(NewExecNode[DebugOutput]())
+	bm.RegisterExecNode(NewExecNode[Sequence]())
+	bm.RegisterExecNode(NewExecNode[Foreach]())
+	bm.RegisterExecNode(NewExecNode[ForeachIntArray]())
+
+	bm.RegisterExecNode(NewExecNode[GetArrayInt]())
+	bm.RegisterExecNode(NewExecNode[GetArrayString]())
+	bm.RegisterExecNode(NewExecNode[GetArrayLen]())
+	bm.RegisterExecNode(NewExecNode[CreateIntArray]())
+	bm.RegisterExecNode(NewExecNode[CreateStringArray]())
+	bm.RegisterExecNode(NewExecNode[AppendIntegerToArray]())
+	bm.RegisterExecNode(NewExecNode[AppendStringToArray]())
+	bm.RegisterExecNode(NewExecNode[BoolIf]())
+	bm.RegisterExecNode(NewExecNode[GreaterThanInteger]())
+	bm.RegisterExecNode(NewExecNode[LessThanInteger]())
+	bm.RegisterExecNode(NewExecNode[EqualInteger]())
+	bm.RegisterExecNode(NewExecNode[RangeCompare]())
+	bm.RegisterExecNode(NewExecNode[EqualSwitch]())
+	bm.RegisterExecNode(NewExecNode[Probability]())
+	bm.RegisterExecNode(NewExecNode[CreateTimer]())
+}
+
+
+func (bm *Blueprint) StartHotReload() (func(),error) {
+	var execPool ExecPool
+	var graphPool GraphPool
+
+	// 加载配置结点生成名字对应的innerExecNode
+	err := execPool.Load(bm.execDefFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将注册的实际执行结点与innerExecNode进行关联
+	for _, newExec := range bm.execNodeList {
+		e := newExec()
+		if !execPool.Register(e) {
+			return nil,fmt.Errorf("register exec failed,exec:%s", e.GetName())
+		}
+	}
+
+	// 加载所有的vgf蓝图文件
+	err = graphPool.Load(&execPool, bm.graphFilePath, bm.blueprintModule)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回配置加载后的刷新内存处理
+	return func() {
+		// 替换旧的执行池和图池
+		bm.execPool = &execPool
+		bm.graphPool = &graphPool
+
+		for _, gh := range bm.mapGraph {
+			gFileName := gh.GetGraphFileName()
+			bGraph := bm.graphPool.GetBaseGraph(gFileName)
+			if bGraph == nil {
+				log.Warn("GetBaseGraph fail", log.String("graph file name", gFileName))
+				bGraph = &baseGraph{entrance: map[int64]*execNode{}}
+			}
+
+			gh.HotReload(bGraph)
+		}
+	}, nil
+
 }
 
 func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprintModule IBlueprintModule, cancelTimer func(*uint64) bool) error {
+	var execPool  ExecPool
+	var graphPool GraphPool
+
 	// 加载配置结点生成名字对应的innerExecNode
-	err := bm.execPool.Load(execDefFilePath)
+	err := execPool.Load(execDefFilePath)
 	if err != nil {
 		return err
 	}
 
 	// 注册系统执行结点
-	bm.regSysNode()
+	bm.regSysNodes()
 
 	// 将注册的实际执行结点与innerExecNode进行关联
-	for _, e := range bm.execNodes {
-		if !bm.execPool.Register(e) {
+	for _, newExec := range bm.execNodeList {
+		e := newExec()
+		if !execPool.Register(e) {
 			return fmt.Errorf("register exec failed,exec:%s", e.GetName())
 		}
 	}
 
 	// 加载所有的vgf蓝图文件
-	err = bm.graphPool.Load(&bm.execPool, graphFilePath, blueprintModule)
+	err = graphPool.Load(&execPool, graphFilePath, blueprintModule)
 	if err != nil {
 		return err
 	}
-	
+
+	bm.execPool = &execPool
+	bm.graphPool = &graphPool
 	bm.cancelTimer = cancelTimer
 	bm.blueprintModule = blueprintModule
 	bm.mapGraph = make(map[int64]IGraph, 128)
+	bm.execDefFilePath = execDefFilePath
+	bm.graphFilePath = graphFilePath
 
 	return nil
 }

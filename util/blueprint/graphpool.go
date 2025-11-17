@@ -52,6 +52,15 @@ func (gp *GraphPool) Load(execPool *ExecPool, graphFilePath string, blueprintMod
 	})
 }
 
+func (gp *GraphPool) GetBaseGraph(graphName string) *baseGraph {
+	gr, ok := gp.mapGraphs[graphName]
+	if !ok {
+		return nil
+	}
+
+	return gr
+}
+
 func (gp *GraphPool) Create(graphName string, graphID int64) IGraph {
 	gr, ok := gp.mapGraphs[graphName]
 	if !ok {

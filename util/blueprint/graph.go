@@ -4,16 +4,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/service"
 	"github.com/goccy/go-json"
-	"github.com/duanhf2012/origin/v2/log"
 )
 
 const ReturnVarial = "g_Return"
+
 var IsDebug = false
+
 type IGraph interface {
 	Do(entranceID int64, args ...any) (Port_Array, error)
 	Release()
+	GetGraphFileName() string
+	HotReload(newBaseGraph *baseGraph)
 }
 
 type IBlueprintModule interface {
@@ -30,7 +34,7 @@ type baseGraph struct {
 
 type Graph struct {
 	graphFileName string
-	graphID int64
+	graphID       int64
 	*baseGraph
 	graphContext
 	IBlueprintModule
@@ -140,7 +144,7 @@ func (gc *graphConfig) GetNodeByID(nodeID string) *nodeConfig {
 
 func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array, error) {
 	if IsDebug {
-		log.Debug("Graph Do", log.String("graphName",gr.graphFileName),log.Int64("graphID", gr.graphID), log.Int64("entranceID", entranceID))
+		log.Debug("Graph Do", log.String("graphName", gr.graphFileName), log.Int64("graphID", gr.graphID), log.Int64("entranceID", entranceID))
 	}
 
 	entranceNode := gr.entrance[entranceID]
@@ -203,4 +207,12 @@ func (gr *Graph) Release() {
 
 	// 清理掉所有数据
 	*gr = Graph{}
+}
+
+func (gr *Graph) HotReload(newBaseGraph *baseGraph) {
+	gr.baseGraph = newBaseGraph
+}
+
+func (gr *Graph) GetGraphFileName() string{
+	return gr.graphFileName
 }
