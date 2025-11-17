@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
-	"sort"
 )
 
-// 格式说明Entrance_ID
+// Entrance 格式:Entrance_XXXX_ID
 const (
 	Entrance = "Entrance_"
 )
 
 type ExecPool struct {
-	innerExecNodeMap map[string]IInnerExecNode
-	execNodeMap      map[string]IExecNode
+	innerExecNodeMap map[string]IInnerExecNode // 所有配置对应的结点信息
+	execNodeMap      map[string]IExecNode      // 实际注册的执行结点
 }
 
 func (em *ExecPool) Load(execDefFilePath string) error {
@@ -49,16 +49,19 @@ func (em *ExecPool) Load(execDefFilePath string) error {
 
 		// 只处理JSON文件
 		if filepath.Ext(path) == ".json" {
+			// 将配置的结点初始化为innerExecNode将加入到innerExecNodeMap中
 			return em.processJSONFile(path)
 		}
 
 		return nil
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed to walk path %s: %v", execDefFilePath, err)
 	}
 
-	return em.loadSysExec()
+	// 生成变量配置对应的配置结点GetVar_类型、SetVar_类型
+	return em.regVariablesNode()
 }
 
 // 处理单个JSON文件
@@ -84,21 +87,24 @@ func (em *ExecPool) processJSONFile(filePath string) error {
 	}
 
 	for i := range baseExecConfig {
-		// 排序
+		// 对PortId进行排序
 		sort.Slice(baseExecConfig[i].Inputs, func(left, right int) bool {
 			return baseExecConfig[i].Inputs[left].PortId < baseExecConfig[i].Inputs[right].PortId
 		})
-
+		// 对PortId进行排序
 		sort.Slice(baseExecConfig[i].Outputs, func(left, right int) bool {
 			return baseExecConfig[i].Outputs[left].PortId < baseExecConfig[i].Outputs[right].PortId
 		})
 
-		exec, err := em.createExecFromJSON(baseExecConfig[i])
-		if err != nil {
-			return err
+		// 根据配置的结点信息，创建innerExecNode
+		var execError error
+		exec, execError := em.createExecFromJSON(baseExecConfig[i])
+		if execError != nil {
+			return execError
 		}
 
-		if !em.loadBaseExec(exec) {
+		// 加载到innerExecNodeMap中
+		if !em.addInnerExec(exec) {
 			return fmt.Errorf("exec %s already registered", exec.GetName())
 		}
 	}
@@ -126,6 +132,7 @@ func (em *ExecPool) createPortByDataType(nodeName, portName, dataType string) (I
 func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExecNode, error) {
 	var baseExec innerExecNode
 
+	// 如果是入口名，则按入口名Entrance_ArrayParam_000002生成结点名:Entrance_ArrayParam
 	entranceName, _, ok := getEntranceNodeNameAndID(baseExecConfig.Name)
 	if ok {
 		baseExec.Name = entranceName
@@ -138,7 +145,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 	baseExec.PrepareMaxInPortId(baseExecConfig.GetMaxInPortId())
 	baseExec.PrepareMaxOutPortId(baseExecConfig.GetMaxOutPortId())
 
-	// exec数量
+	// 初始化所有的输入端口
 	inExecNum := 0
 	for index, input := range baseExecConfig.Inputs {
 		portType := strings.ToLower(input.PortType)
@@ -146,6 +153,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 			return nil, fmt.Errorf("input %s data type %s not support", input.Name, input.DataType)
 		}
 
+		// 输入执行结点只能有一个,且只能放在第一个
 		if portType == Config_PortType_Exec {
 			if inExecNum > 0 {
 				return nil, fmt.Errorf("inPort only allows one Execute,node name %s", baseExec.Name)
@@ -155,19 +163,22 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 			}
 
 			inExecNum++
+			// 设置执行端口
 			baseExec.SetInPortById(input.PortId, NewPortExec())
-			// baseExec.AppendInPort(NewPortExec())
 			continue
 		}
 
+		// 根据类型设置对应的端口
 		port, err := em.createPortByDataType(baseExec.Name, input.Name, input.DataType)
 		if err != nil {
 			return nil, err
 		}
 
+		// 根据PortId设置端口
 		baseExec.SetInPortById(input.PortId, port)
 	}
 
+	// 初始化所有的输出端口
 	hasData := false
 	for _, output := range baseExecConfig.Outputs {
 		portType := strings.ToLower(output.PortType)
@@ -180,11 +191,13 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 			return nil, fmt.Errorf("the exec port can only be placed at the front,node name %s", baseExec.Name)
 		}
 
+		// 设置执行端口
 		if portType == Config_PortType_Exec {
 			baseExec.SetOutPortById(output.PortId, NewPortExec())
 			continue
 		}
 
+		// 根据类型设置数据端口
 		hasData = true
 		port, err := em.createPortByDataType(baseExec.Name, output.Name, output.DataType)
 		if err != nil {
@@ -196,7 +209,7 @@ func (em *ExecPool) createExecFromJSON(baseExecConfig BaseExecConfig) (IInnerExe
 	return &baseExec, nil
 }
 
-func (em *ExecPool) loadBaseExec(exec IInnerExecNode) bool {
+func (em *ExecPool) addInnerExec(exec IInnerExecNode) bool {
 	if _, ok := em.innerExecNodeMap[exec.GetName()]; ok {
 		return false
 	}
@@ -224,10 +237,14 @@ func (em *ExecPool) Register(exec IExecNode) bool {
 		return false
 	}
 
+	// 设置实际执行结点中innerExecNode变量,BaseExecNode.innerExecNode = innerNode
 	baseExecNode.initInnerExecNode(innerNode.(*innerExecNode))
+
+	// innerNode设置实际的exec变量,innerExecNode.IExecNode = exec
 	innerNode.SetExec(exec)
 
-	em.execNodeMap[baseExec.GetName()] = baseExec
+	// 将实际的执行结点保存到execNodeMap中
+	em.execNodeMap[baseExec.GetName()] = exec
 	return true
 }
 
@@ -238,7 +255,8 @@ func (em *ExecPool) GetExec(name string) IInnerExecNode {
 	return nil
 }
 
-func (em *ExecPool) loadSysExec() error {
+// regVariablesNode 注册变量结点GetVar_类型、SetVar_类型
+func (em *ExecPool) regVariablesNode() error {
 	var err error
 	if err = em.regGetVariables(Config_DataType_Int); err != nil {
 		return err
@@ -300,7 +318,7 @@ func (em *ExecPool) regGetVariables(typ string) error {
 	var getVariablesNode GetVariablesNode
 	getVariablesNode.nodeName = baseExec.GetName()
 
-	if !em.loadBaseExec(&baseExec) {
+	if !em.addInnerExec(&baseExec) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
 	if !em.Register(&getVariablesNode) {
@@ -336,7 +354,7 @@ func (em *ExecPool) regSetVariables(typ string) error {
 	baseExec.SetOutPortById(1, outPort)
 
 	baseExec.IExecNode = &SetVariablesNode{nodeName: baseExec.GetName()}
-	if !em.loadBaseExec(&baseExec) {
+	if !em.addInnerExec(&baseExec) {
 		return fmt.Errorf("exec %s already registered", baseExec.GetName())
 	}
 	if !em.Register(baseExec.IExecNode) {

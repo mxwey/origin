@@ -56,26 +56,32 @@ func (bm *Blueprint) regSysNode() {
 }
 
 func (bm *Blueprint) Init(execDefFilePath string, graphFilePath string, blueprintModule IBlueprintModule, cancelTimer func(*uint64) bool) error {
-	bm.regSysNode()
+	// 加载配置结点生成名字对应的innerExecNode
 	err := bm.execPool.Load(execDefFilePath)
 	if err != nil {
 		return err
 	}
 
+	// 注册系统执行结点
+	bm.regSysNode()
+
+	// 将注册的实际执行结点与innerExecNode进行关联
 	for _, e := range bm.execNodes {
 		if !bm.execPool.Register(e) {
 			return fmt.Errorf("register exec failed,exec:%s", e.GetName())
 		}
 	}
 
+	// 加载所有的vgf蓝图文件
 	err = bm.graphPool.Load(&bm.execPool, graphFilePath, blueprintModule)
 	if err != nil {
 		return err
 	}
-
+	
 	bm.cancelTimer = cancelTimer
 	bm.blueprintModule = blueprintModule
 	bm.mapGraph = make(map[int64]IGraph, 128)
+
 	return nil
 }
 
@@ -117,7 +123,7 @@ func (bm *Blueprint) ReleaseGraph(graphID int64) {
 	if graphID == 0 {
 		return
 	}
-	
+
 	defer delete(bm.mapGraph, graphID)
 	graph := bm.mapGraph[graphID]
 	if graph == nil {

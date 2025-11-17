@@ -2,15 +2,7 @@ package blueprint
 
 import "fmt"
 
-type IBaseExecNode interface {
-	initInnerExecNode(innerNode *innerExecNode)
-	initExecNode(gr *Graph, en *execNode) error
-	GetPorts() ([]IPort, []IPort)
-	getExecNodeInfo() (*ExecContext, *execNode)
-	setExecNodeInfo(gr *ExecContext, en *execNode)
-	GetBlueprintModule() IBlueprintModule
-}
-
+// IInnerExecNode 配置生成的结点
 type IInnerExecNode interface {
 	GetName() string
 	SetExec(exec IExecNode)
@@ -26,7 +18,19 @@ type IInnerExecNode interface {
 	GetOutPortParamStartIndex() int
 }
 
+// IBaseExecNode 实际注册的执行结点的基础结构体
+type IBaseExecNode interface {
+	initInnerExecNode(innerNode *innerExecNode)
+	initExecNode(gr *Graph, en *execNode) error
+	GetPorts() ([]IPort, []IPort)
+	getExecNodeInfo() (*ExecContext, *execNode)
+	setExecNodeInfo(gr *ExecContext, en *execNode)
+	GetBlueprintModule() IBlueprintModule
+}
+
+// IExecNode 实际注册的执行结点
 type IExecNode interface {
+	IBaseExecNode
 	GetName() string
 	DoNext(index int) error
 	Exec() (int, error) // 返回后续执行的Node的Index
@@ -34,6 +38,7 @@ type IExecNode interface {
 	getInnerExecNode() IInnerExecNode
 }
 
+// 配置对应的基础信息+端口数据
 type innerExecNode struct {
 	Name        string
 	Title       string
@@ -45,7 +50,7 @@ type innerExecNode struct {
 
 	outPortParamStartIndex int // 输出参数的起始索引,用于排除执行出口
 
-	IExecNode
+	IExecNode // 实际注册的执行结点
 }
 
 type BaseExecNode struct {
@@ -105,7 +110,6 @@ func (bc *BaseExecConfig) GetMaxOutPortId() int {
 
 	return maxPortId
 }
-
 
 func (em *innerExecNode) PrepareMaxInPortId(maxInPortId int) {
 	em.inPort = make([]IPort, maxInPortId+1)
@@ -567,7 +571,6 @@ func (en *BaseExecNode) GetNextExecLen() int {
 func (en *BaseExecNode) getInnerExecNode() IInnerExecNode {
 	return en.innerExecNode.IExecNode.(IInnerExecNode)
 }
-
 
 func (en *BaseExecNode) GetBlueprintModule() IBlueprintModule {
 	if en.gr == nil {

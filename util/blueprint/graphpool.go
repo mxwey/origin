@@ -73,21 +73,25 @@ func (gp *GraphPool) processJSONFile(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %v", filePath, err)
 	}
+
 	defer func() {
-		if err := file.Close(); err != nil {
+		if err = file.Close(); err != nil {
 			fmt.Printf("关闭文件 %s 时出错: %v\n", filePath, err)
 		}
 	}()
 
 	fileName := filepath.Base(filePath)
-	ext := filepath.Ext(fileName)             // 获取".html"
+	ext := filepath.Ext(fileName)             // 获取".vgf"
 	name := strings.TrimSuffix(fileName, ext) // 获取"name"
+
+	// 解析文件
 	var gConfig graphConfig
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&gConfig); err != nil {
+	if err = decoder.Decode(&gConfig); err != nil {
 		return fmt.Errorf("failed to decode JSON from file %s: %v", filePath, err)
 	}
 
+	// 预处理蓝图
 	return gp.prepareGraph(name, &gConfig)
 }
 
@@ -173,7 +177,7 @@ func (gp *GraphPool) genAllNode(graphConfig *graphConfig) (map[string]*execNode,
 
 func (gp *GraphPool) prepareOneNode(mapNodeExec map[string]*execNode, nodeExec *execNode, graphConfig *graphConfig, recursion *int) error {
 	*recursion++
-	if *recursion > 100 {
+	if *recursion > 256 {
 		return fmt.Errorf("recursion too deep")
 	}
 
