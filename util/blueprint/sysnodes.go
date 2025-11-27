@@ -681,7 +681,7 @@ func (em *CreateTimer) Exec() (int, error) {
 
 	array, ok := em.GetInPortArray(1)
 	if !ok {
-		return -1, fmt.Errorf("CreateTimer inParam 0 error")
+		return -1, fmt.Errorf("CreateTimer inParam 1 error")
 	}
 
 	var timerId uint64
@@ -718,7 +718,7 @@ func (em *CloseTimer) GetName() string {
 func (em *CloseTimer) Exec() (int, error) {
 	timerID, ok := em.GetInPortInt(1)
 	if !ok {
-		return -1, fmt.Errorf("CreateTimer inParam 0 error")
+		return -1, fmt.Errorf("CreateTimer inParam 1 error")
 	}
 
 	id := uint64(timerID)
@@ -728,4 +728,57 @@ func (em *CloseTimer) Exec() (int, error) {
 	}
 
 	return 0, nil
+}
+
+
+
+
+// AppendIntReturn 追加返回结果(Int)
+type AppendIntReturn struct {
+	BaseExecNode
+}
+
+func (em *AppendIntReturn) GetName() string {
+	return "AppendIntReturn"
+}
+
+func (em *AppendIntReturn) Exec() (int, error) {
+	val, ok := em.GetInPortInt(1)
+	if !ok {
+		return -1, fmt.Errorf("AppendIntReturn inParam 1 error")
+	}
+
+	returnPort := em.gr.GetAndCreateReturnPort()
+	if returnPort == nil {
+		return -1, fmt.Errorf("GetAndCreateReturnPort fail")
+	}
+	returnPort.AppendArrayValInt(val)
+
+	return -0, nil
+}
+
+
+
+// AppendStringReturn 追加返回结果(String)
+type AppendStringReturn struct {
+	BaseExecNode
+}
+
+func (em *AppendStringReturn) GetName() string {
+	return "AppendStringReturn"
+}
+
+func (em *AppendStringReturn) Exec() (int, error) {
+	val, ok := em.GetInPortStr(1)
+	if !ok {
+		return -1, fmt.Errorf("AppendStringReturn inParam 1 error")
+	}
+
+	returnPort := em.gr.GetAndCreateReturnPort()
+	if returnPort == nil {
+		return -1, fmt.Errorf("GetAndCreateReturnPort fail")
+	}
+	returnPort.AppendArrayValStr(val)
+
+	return -0, nil
 }

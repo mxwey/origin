@@ -142,6 +142,17 @@ func (gc *graphConfig) GetNodeByID(nodeID string) *nodeConfig {
 	return nil
 }
 
+func (gr *Graph) GetAndCreateReturnPort() IPort {
+	p, ok := gr.globalVariables[ReturnVarial]
+	if ok {
+		return p
+	}
+
+	p = NewPortArray()
+	gr.globalVariables[ReturnVarial] = p
+	return p
+}
+
 func (gr *Graph) Do(entranceID int64, args ...any) (Port_Array, error) {
 	if IsDebug {
 		log.Debug("Graph Do", log.String("graphName", gr.graphFileName), log.Int64("graphID", gr.graphID), log.Int64("entranceID", entranceID))

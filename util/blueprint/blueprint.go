@@ -69,6 +69,8 @@ func (bm *Blueprint) regSysNodes() {
 	bm.RegisterExecNode(NewExecNode[EqualSwitch]())
 	bm.RegisterExecNode(NewExecNode[Probability]())
 	bm.RegisterExecNode(NewExecNode[CreateTimer]())
+	bm.RegisterExecNode(NewExecNode[AppendIntReturn]())
+	bm.RegisterExecNode(NewExecNode[AppendStringReturn]())
 }
 
 
