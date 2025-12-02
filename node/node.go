@@ -195,7 +195,7 @@ func initLog() error {
 
 	localnodeinfo := cluster.GetCluster().GetLocalNodeInfo()
 	filepre := fmt.Sprintf("%s_%d_", localnodeinfo.NodeName, localnodeinfo.NodeId)
-	logger, err := log.NewTextLogger(log.LogLevel,log.LogPath,filepre,true,log.LogChannelCap)
+	logger, err := log.NewJsonLogger(log.LogLevel,log.LogPath,filepre,true,log.LogChannelCap)
 	if err != nil {
 		fmt.Printf("cannot create log file!\n")
 		return err
